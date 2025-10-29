@@ -106,10 +106,6 @@ M-Hike is built with modern Android development tools:
 **Release Date**: 2025-10-29
 **Status**: Production Ready
 
-## License
-
-[Add your license here]
-
 ## Acknowledgments
 
 Built with modern Android development best practices and powered by Firebase cloud services.
