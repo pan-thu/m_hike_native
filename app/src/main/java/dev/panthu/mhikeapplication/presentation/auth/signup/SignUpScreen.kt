@@ -43,6 +43,7 @@ import dev.panthu.mhikeapplication.presentation.auth.AuthViewModel
 import dev.panthu.mhikeapplication.presentation.common.components.MHikePrimaryButton
 import dev.panthu.mhikeapplication.presentation.common.components.MHikeTextButton
 import dev.panthu.mhikeapplication.presentation.common.components.MHikeTextField
+import dev.panthu.mhikeapplication.presentation.migration.MigrationProgressDialog
 
 @Composable
 fun SignUpScreen(
@@ -248,6 +249,19 @@ fun SignUpScreen(
                 text = "Already have an account? Log in",
                 onClick = onNavigateToLogin,
                 enabled = !uiState.isLoading
+            )
+        }
+
+        // Migration Progress Dialog
+        if (uiState.showMigrationDialog) {
+            MigrationProgressDialog(
+                migrationState = uiState.migrationProgress,
+                onDismiss = {
+                    viewModel.onEvent(AuthEvent.DismissMigrationDialog)
+                },
+                onRetry = {
+                    viewModel.onEvent(AuthEvent.RetryMigration)
+                }
             )
         }
     }

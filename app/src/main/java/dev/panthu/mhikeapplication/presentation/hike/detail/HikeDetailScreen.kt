@@ -42,6 +42,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import dev.panthu.mhikeapplication.domain.model.Difficulty
+import dev.panthu.mhikeapplication.presentation.auth.AuthViewModel
+import dev.panthu.mhikeapplication.presentation.auth.AuthenticationState
+import dev.panthu.mhikeapplication.presentation.common.components.GuestModeBanner
 import dev.panthu.mhikeapplication.presentation.common.components.MHikePrimaryButton
 import dev.panthu.mhikeapplication.presentation.hike.HikeEvent
 import dev.panthu.mhikeapplication.presentation.hike.HikeViewModel
@@ -57,9 +60,15 @@ fun HikeDetailScreen(
     onShare: (String) -> Unit = {},
     onNavigateToAddObservation: (String) -> Unit = {},
     onNavigateToObservationDetail: (String, String) -> Unit = { _, _ -> },
-    viewModel: HikeViewModel = hiltViewModel()
+    onNavigateToSignUp: () -> Unit = {},
+    viewModel: HikeViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val authState by authViewModel.uiState.collectAsState()
+
+    val isAuthenticated = authState.authState is AuthenticationState.Authenticated
+    val isGuest = authState.authState is AuthenticationState.Guest
 
     LaunchedEffect(hikeId) {
         viewModel.onEvent(HikeEvent.LoadHike(hikeId))
@@ -78,11 +87,14 @@ fun HikeDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onShare(hikeId) }) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Share hike"
-                        )
+                    // Share button only for authenticated users
+                    if (isAuthenticated) {
+                        IconButton(onClick = { onShare(hikeId) }) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share hike"
+                            )
+                        }
                     }
                     IconButton(
                         onClick = { viewModel.onEvent(HikeEvent.DeleteHike(hikeId)) }
@@ -132,6 +144,14 @@ fun HikeDetailScreen(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // Guest mode banner
+                        if (isGuest) {
+                            GuestModeBanner(
+                                onSignUp = onNavigateToSignUp,
+                                message = "Sign up to share this hike with friends and back up to cloud"
+                            )
+                        }
+
                         // Title
                         Text(
                             text = hike.name,

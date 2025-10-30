@@ -10,6 +10,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import dev.panthu.mhikeapplication.domain.usecase.GetCurrentLocationUseCase
+import dev.panthu.mhikeapplication.presentation.auth.AuthViewModel
+import dev.panthu.mhikeapplication.presentation.auth.AuthEvent
 import dev.panthu.mhikeapplication.presentation.auth.login.LoginScreen
 import dev.panthu.mhikeapplication.presentation.auth.signup.SignUpScreen
 import dev.panthu.mhikeapplication.presentation.hike.create.HikeCreationScreen
@@ -19,6 +21,7 @@ import dev.panthu.mhikeapplication.presentation.home.HomeScreen
 import dev.panthu.mhikeapplication.presentation.observation.add.AddObservationScreen
 import dev.panthu.mhikeapplication.presentation.observation.detail.ObservationDetailScreen
 import dev.panthu.mhikeapplication.presentation.hike.share.ShareHikeScreen
+import dev.panthu.mhikeapplication.presentation.onboarding.OnboardingScreen
 
 @Composable
 fun NavGraph(
@@ -30,6 +33,25 @@ fun NavGraph(
         navController = navController,
         startDestination = startDestination
     ) {
+        composable(Screen.Onboarding.route) {
+            val authViewModel: AuthViewModel = hiltViewModel()
+
+            OnboardingScreen(
+                onContinueAsGuest = {
+                    authViewModel.onEvent(AuthEvent.ContinueAsGuest)
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                },
+                onSignUp = {
+                    navController.navigate(Screen.SignUp.route)
+                },
+                onSignIn = {
+                    navController.navigate(Screen.Login.route)
+                }
+            )
+        }
+
         composable(Screen.Login.route) {
             LoginScreen(
                 onNavigateToSignUp = {

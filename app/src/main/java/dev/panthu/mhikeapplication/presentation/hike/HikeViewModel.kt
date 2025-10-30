@@ -26,12 +26,16 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HikeViewModel @Inject constructor(
-    private val hikeRepository: HikeRepository,
+    private val repositoryProvider: dev.panthu.mhikeapplication.domain.provider.RepositoryProvider,
     private val authRepository: AuthRepository,
     private val uploadImageUseCase: UploadImageUseCase,
     private val deleteImageUseCase: DeleteImageUseCase,
     private val searchUsersUseCase: SearchUsersUseCase
 ) : ViewModel() {
+
+    // Get repository based on current auth state
+    private val hikeRepository: HikeRepository
+        get() = repositoryProvider.getHikeRepository()
 
     private val _uiState = MutableStateFlow(HikeUiState())
     val uiState: StateFlow<HikeUiState> = _uiState.asStateFlow()

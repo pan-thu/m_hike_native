@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.google.services)
     alias(libs.plugins.kotlin.kapt)
+    kotlin("plugin.serialization") version "1.9.20"
 }
 
 android {
@@ -80,6 +81,14 @@ dependencies {
 
     // Location
     implementation(libs.play.services.location)
+
+    // Room (Local Database)
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+
+    // Kotlinx Serialization (for JSON conversion in Room)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
     // Testing
     testImplementation(libs.junit)

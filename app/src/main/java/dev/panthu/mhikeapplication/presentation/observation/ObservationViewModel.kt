@@ -22,10 +22,14 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ObservationViewModel @Inject constructor(
-    private val observationRepository: ObservationRepository,
+    private val repositoryProvider: dev.panthu.mhikeapplication.domain.provider.RepositoryProvider,
     private val uploadImageUseCase: UploadImageUseCase,
     private val deleteImageUseCase: DeleteImageUseCase
 ) : ViewModel() {
+
+    // Get repository based on current auth state
+    private val observationRepository: ObservationRepository
+        get() = repositoryProvider.getObservationRepository()
 
     private val _uiState = MutableStateFlow(ObservationUiState())
     val uiState: StateFlow<ObservationUiState> = _uiState.asStateFlow()

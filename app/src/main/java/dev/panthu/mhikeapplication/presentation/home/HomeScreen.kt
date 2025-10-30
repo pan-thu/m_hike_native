@@ -18,15 +18,21 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.panthu.mhikeapplication.presentation.auth.AuthEvent
 import dev.panthu.mhikeapplication.presentation.auth.AuthViewModel
+import dev.panthu.mhikeapplication.presentation.auth.AuthenticationState
+import dev.panthu.mhikeapplication.presentation.common.components.GuestModeBanner
 import dev.panthu.mhikeapplication.presentation.common.components.MHikePrimaryButton
 
 @Composable
 fun HomeScreen(
     onLogout: () -> Unit,
     onNavigateToHikeList: () -> Unit,
+    onNavigateToSignUp: () -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val isGuest = uiState.authState is AuthenticationState.Guest
+    val isAuthenticated = uiState.authState is AuthenticationState.Authenticated
 
     Scaffold { padding ->
         Column(
@@ -45,6 +51,21 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Guest mode greeting
+            if (isGuest) {
+                Text(
+                    text = "Hello, Guest!",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Using offline mode",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Authenticated user greeting
             uiState.currentUser?.let { user ->
                 Text(
                     text = "Hello, ${user.displayName}!",
@@ -60,7 +81,18 @@ fun HomeScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Guest mode banner
+            if (isGuest) {
+                GuestModeBanner(
+                    onSignUp = onNavigateToSignUp,
+                    message = "Sign up to unlock cloud backup and sharing features"
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             MHikePrimaryButton(
                 text = "My Hikes",

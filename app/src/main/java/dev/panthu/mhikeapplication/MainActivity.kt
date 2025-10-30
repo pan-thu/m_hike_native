@@ -38,13 +38,19 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    val authState by authViewModel.uiState.collectAsStateWithLifecycle()
+                    val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
 
                     // Determine start destination based on auth state
-                    val startDestination = if (authState.isAuthenticated) {
-                        Screen.Home.route
-                    } else {
-                        Screen.Login.route
+                    val startDestination = when (authUiState.authState) {
+                        is dev.panthu.mhikeapplication.presentation.auth.AuthenticationState.Authenticated -> {
+                            Screen.Home.route
+                        }
+                        is dev.panthu.mhikeapplication.presentation.auth.AuthenticationState.Guest -> {
+                            Screen.Home.route
+                        }
+                        is dev.panthu.mhikeapplication.presentation.auth.AuthenticationState.Unauthenticated -> {
+                            Screen.Onboarding.route
+                        }
                     }
 
                     NavGraph(
