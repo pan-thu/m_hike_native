@@ -1,10 +1,12 @@
 package dev.panthu.mhikeapplication.data.repository
 
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dev.panthu.mhikeapplication.domain.model.Difficulty
 import dev.panthu.mhikeapplication.domain.model.Hike
 import dev.panthu.mhikeapplication.domain.repository.HikeRepository
+import dev.panthu.mhikeapplication.util.NetworkManager
 import dev.panthu.mhikeapplication.util.Result
 import dev.panthu.mhikeapplication.util.safeCall
 import kotlinx.coroutines.channels.awaitClose
@@ -16,7 +18,9 @@ import javax.inject.Singleton
 
 @Singleton
 class HikeRepositoryImpl @Inject constructor(
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    private val auth: FirebaseAuth,
+    private val networkManager: NetworkManager
 ) : HikeRepository {
 
     private val hikesCollection = firestore.collection("hikes")
@@ -110,57 +114,101 @@ class HikeRepositoryImpl @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    override suspend fun createHike(hike: Hike): Result<Hike> = safeCall {
-        val now = Timestamp.now()
-        val hikeToCreate = hike.copy(
-            createdAt = now,
-            updatedAt = now
-        )
+    override suspend fun createHike(hike: Hike): Result<Hike> {
+        // Check authentication before Firestore operation
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            return Result.Error("Authentication required. Please sign in to create hikes.")
+        }
 
-        hikesCollection.document(hikeToCreate.id)
-            .set(hikeToCreate.toMap())
-            .await()
+        // Check network before Firestore operation
+        if (!networkManager.requireNetwork("createHike")) {
+            return Result.Error("No network connection. Please check your internet and try again.")
+        }
 
-        hikeToCreate
+        return safeCall {
+            val now = Timestamp.now()
+            val hikeToCreate = hike.copy(
+                createdAt = now,
+                updatedAt = now
+            )
+
+            hikesCollection.document(hikeToCreate.id)
+                .set(hikeToCreate.toMap())
+                .await()
+
+            hikeToCreate
+        }
     }
 
-    override suspend fun updateHike(hike: Hike): Result<Hike> = safeCall {
-        val now = Timestamp.now()
-        val hikeToUpdate = hike.copy(updatedAt = now)
+    override suspend fun updateHike(hike: Hike): Result<Hike> {
+        // Check authentication before Firestore operation
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            return Result.Error("Authentication required. Please sign in to update hikes.")
+        }
 
-        hikesCollection.document(hikeToUpdate.id)
-            .set(hikeToUpdate.toMap())
-            .await()
+        // Check network before Firestore operation
+        if (!networkManager.requireNetwork("updateHike")) {
+            return Result.Error("No network connection. Please check your internet and try again.")
+        }
 
-        hikeToUpdate
+        return safeCall {
+            val now = Timestamp.now()
+            val hikeToUpdate = hike.copy(updatedAt = now)
+
+            hikesCollection.document(hikeToUpdate.id)
+                .set(hikeToUpdate.toMap())
+                .await()
+
+            hikeToUpdate
+        }
     }
 
-    override suspend fun deleteHike(hikeId: String, userId: String): Result<Unit> = safeCall {
-        // Verify ownership before deletion
-        val hikeDoc = hikesCollection.document(hikeId).get().await()
-        if (!hikeDoc.exists()) {
-            throw Exception("Hike not found")
+    override suspend fun deleteHike(hikeId: String, userId: String): Result<Unit> {
+        // Check authentication before Firestore operation
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
+            return Result.Error("Authentication required. Please sign in to delete hikes.")
         }
 
-        val hike = hikeDoc.data?.let { Hike.fromMap(it) }
-        if (hike?.ownerId != userId) {
-            throw Exception("Only the owner can delete this hike")
+        // Verify userId matches authenticated user
+        if (currentUser.uid != userId) {
+            return Result.Error("Authentication mismatch. Please sign in with the correct account.")
         }
 
-        // Delete all observations first
-        val observations = hikesCollection.document(hikeId)
-            .collection("observations")
-            .get()
-            .await()
-
-        val batch = firestore.batch()
-        observations.documents.forEach { doc ->
-            batch.delete(doc.reference)
+        // Check network before Firestore operation
+        if (!networkManager.requireNetwork("deleteHike")) {
+            return Result.Error("No network connection. Please check your internet and try again.")
         }
 
-        // Delete the hike
-        batch.delete(hikesCollection.document(hikeId))
-        batch.commit().await()
+        return safeCall {
+            // Verify ownership before deletion
+            val hikeDoc = hikesCollection.document(hikeId).get().await()
+            if (!hikeDoc.exists()) {
+                throw Exception("Hike not found")
+            }
+
+            val hike = hikeDoc.data?.let { Hike.fromMap(it) }
+            if (hike?.ownerId != userId) {
+                throw Exception("Only the owner can delete this hike")
+            }
+
+            // Delete all observations first
+            val observations = hikesCollection.document(hikeId)
+                .collection("observations")
+                .get()
+                .await()
+
+            val batch = firestore.batch()
+            observations.documents.forEach { doc ->
+                batch.delete(doc.reference)
+            }
+
+            // Delete the hike
+            batch.delete(hikesCollection.document(hikeId))
+            batch.commit().await()
+        }
     }
 
     override suspend fun addInvitedUsers(hikeId: String, userIds: List<String>): Result<Unit> = safeCall {

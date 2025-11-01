@@ -13,36 +13,56 @@ import javax.inject.Singleton
 class GuestIdManager @Inject constructor(
     private val context: Context
 ) {
-    private val prefs: SharedPreferences by lazy {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    }
-
-    /**
-     * Generate or retrieve existing guest ID
-     */
-    fun getOrCreateGuestId(): String {
-        val existingId = prefs.getString(KEY_GUEST_ID, null)
-        return if (existingId != null) {
-            existingId
-        } else {
-            val newId = generateGuestId()
-            prefs.edit().putString(KEY_GUEST_ID, newId).apply()
-            newId
+    private val prefs: SharedPreferences? by lazy {
+        try {
+            context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to initialize SharedPreferences", e)
+            null
         }
     }
 
     /**
-     * Get existing guest ID without creating new one
+     * Generate or retrieve existing guest ID with null safety
+     */
+    fun getOrCreateGuestId(): String {
+        return try {
+            val existingId = prefs?.getString(KEY_GUEST_ID, null)
+            if (existingId != null) {
+                existingId
+            } else {
+                val newId = generateGuestId()
+                prefs?.edit()?.putString(KEY_GUEST_ID, newId)?.apply()
+                newId
+            }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to get or create guest ID", e)
+            // Fallback: Generate ID that won't be persisted
+            generateGuestId()
+        }
+    }
+
+    /**
+     * Get existing guest ID without creating new one (null-safe)
      */
     fun getGuestId(): String? {
-        return prefs.getString(KEY_GUEST_ID, null)
+        return try {
+            prefs?.getString(KEY_GUEST_ID, null)
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to get guest ID", e)
+            null
+        }
     }
 
     /**
      * Clear guest ID (called after migration to authenticated account)
      */
     fun clearGuestId() {
-        prefs.edit().remove(KEY_GUEST_ID).apply()
+        try {
+            prefs?.edit()?.remove(KEY_GUEST_ID)?.apply()
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to clear guest ID", e)
+        }
     }
 
     /**
@@ -119,6 +139,7 @@ class GuestIdManager @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "GuestIdManager"
         private const val PREFS_NAME = "mhike_auth_prefs"
         private const val KEY_GUEST_ID = "guest_id"
         private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"

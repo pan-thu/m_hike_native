@@ -28,11 +28,22 @@ enum class StorageType {
 
 /**
  * Extension function to determine storage type from URL
+ * Optimized for performance with case-insensitive matching and early returns
  */
 fun String.getStorageType(): StorageType {
-    return when {
-        startsWith("http") || startsWith("https") -> StorageType.FIREBASE
-        startsWith("/") || startsWith("file://") -> StorageType.LOCAL
+    if (isEmpty()) return StorageType.LOCAL
+
+    // Optimize by checking first character first (fastest path)
+    return when (this[0]) {
+        'h', 'H' -> {
+            // Check for http/https URLs (Firebase storage)
+            if (startsWith("http", ignoreCase = true)) StorageType.FIREBASE
+            else StorageType.LOCAL
+        }
+        '/', 'f', 'F' -> {
+            // Check for local file paths
+            StorageType.LOCAL
+        }
         else -> StorageType.LOCAL // Default to local for safety
     }
 }

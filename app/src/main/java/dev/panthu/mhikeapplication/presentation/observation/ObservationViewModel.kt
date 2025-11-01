@@ -27,9 +27,10 @@ class ObservationViewModel @Inject constructor(
     private val deleteImageUseCase: DeleteImageUseCase
 ) : ViewModel() {
 
-    // Get repository based on current auth state
-    private val observationRepository: ObservationRepository
-        get() = repositoryProvider.getObservationRepository()
+    // Get repository based on current auth state - synchronous version
+    // For proper safety, use getObservationRepository() (suspend) in coroutines
+    private val observationRepositorySync: ObservationRepository
+        get() = repositoryProvider.getObservationRepositorySync()
 
     private val _uiState = MutableStateFlow(ObservationUiState())
     val uiState: StateFlow<ObservationUiState> = _uiState.asStateFlow()
@@ -38,6 +39,12 @@ class ObservationViewModel @Inject constructor(
     val formState: StateFlow<ObservationFormState> = _formState.asStateFlow()
 
     private var uploadJob: Job? = null
+
+    override fun onCleared() {
+        super.onCleared()
+        // Cancel any ongoing upload jobs to prevent memory leaks
+        uploadJob?.cancel()
+    }
 
     fun onEvent(event: ObservationEvent) {
         when (event) {
@@ -185,7 +192,9 @@ class ObservationViewModel @Inject constructor(
                 comments = form.comments
             )
 
-            when (val result = observationRepository.createObservation(observation)) {
+            // Get repository safely with mutex lock
+            val repository = repositoryProvider.getObservationRepository()
+            when (val result = repository.createObservation(observation)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
@@ -213,7 +222,9 @@ class ObservationViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            when (val result = observationRepository.getObservation(hikeId, observationId)) {
+            // Get repository safely with mutex lock
+            val repository = repositoryProvider.getObservationRepository()
+            when (val result = repository.getObservation(hikeId, observationId)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
@@ -239,7 +250,9 @@ class ObservationViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            observationRepository.getObservationsForHike(hikeId).collectLatest { result ->
+            // Get repository safely with mutex lock
+            val repository = repositoryProvider.getObservationRepository()
+            repository.getObservationsForHike(hikeId).collectLatest { result ->
                 when (result) {
                     is Result.Success -> {
                         _uiState.update {
@@ -288,7 +301,9 @@ class ObservationViewModel @Inject constructor(
                 updatedAt = Timestamp.now()
             )
 
-            when (val result = observationRepository.updateObservation(observation)) {
+            // Get repository safely with mutex lock
+            val repository = repositoryProvider.getObservationRepository()
+            when (val result = repository.updateObservation(observation)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
@@ -314,7 +329,9 @@ class ObservationViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            when (val result = observationRepository.deleteObservation(hikeId, observationId)) {
+            // Get repository safely with mutex lock
+            val repository = repositoryProvider.getObservationRepository()
+            when (val result = repository.deleteObservation(hikeId, observationId)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(

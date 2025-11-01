@@ -28,7 +28,7 @@ data class HikeUiState(
 )
 
 /**
- * Form state for hike creation/editing
+ * Form state for hike creation/editing with comprehensive validation
  */
 data class HikeFormState(
     val name: String = "",
@@ -44,22 +44,139 @@ data class HikeFormState(
     val description: String = "",
     val images: List<ImageMetadata> = emptyList(),
     val invitedUsers: List<User> = emptyList(),
+    val terrain: String = "",
+    val groupSize: Int = 1,
 
     // Validation errors
     val nameError: String? = null,
     val locationError: String? = null,
     val lengthError: String? = null,
-    val dateError: String? = null
+    val dateError: String? = null,
+    val descriptionError: String? = null,
+    val groupSizeError: String? = null
 ) {
+    companion object {
+        const val NAME_MIN_LENGTH = 3
+        const val NAME_MAX_LENGTH = 100
+        const val DESCRIPTION_MAX_LENGTH = 2000
+        const val LENGTH_MAX_KM = 1000.0
+        const val GROUP_SIZE_MIN = 1
+        const val GROUP_SIZE_MAX = 100
+        const val MAX_IMAGES = 20
+        const val MAX_PAST_YEARS = 10
+    }
+
     val isValid: Boolean
-        get() = name.isNotBlank() &&
-                location.name.isNotBlank() &&
-                length.toDoubleOrNull() != null &&
-                length.toDouble() > 0 &&
-                nameError == null &&
-                locationError == null &&
-                lengthError == null &&
-                dateError == null
+        get() = validateName() == null &&
+                validateLocation() == null &&
+                validateLength() == null &&
+                validateDate() == null &&
+                validateDescription() == null &&
+                validateGroupSize() == null
+
+    /**
+     * Validate hike name
+     * - Required
+     * - 3-100 characters
+     */
+    fun validateName(): String? {
+        return when {
+            name.isBlank() -> "Hike name is required"
+            name.length < NAME_MIN_LENGTH -> "Name must be at least $NAME_MIN_LENGTH characters"
+            name.length > NAME_MAX_LENGTH -> "Name must be less than $NAME_MAX_LENGTH characters"
+            else -> null
+        }
+    }
+
+    /**
+     * Validate location
+     * - Required name
+     * - Valid coordinates if provided
+     */
+    fun validateLocation(): String? {
+        return when {
+            location.name.isBlank() -> "Location name is required"
+            location.coordinates != null && !isValidCoordinates(location.coordinates) ->
+                "Invalid coordinates. Latitude must be -90 to 90, longitude -180 to 180"
+            else -> null
+        }
+    }
+
+    /**
+     * Validate length
+     * - Required
+     * - Positive number
+     * - Less than 1000 km
+     */
+    fun validateLength(): String? {
+        val lengthValue = length.toDoubleOrNull()
+        return when {
+            length.isBlank() -> "Hike length is required"
+            lengthValue == null -> "Length must be a valid number"
+            lengthValue <= 0 -> "Length must be greater than 0"
+            lengthValue > LENGTH_MAX_KM -> "Length must be less than $LENGTH_MAX_KM km"
+            else -> null
+        }
+    }
+
+    /**
+     * Validate date
+     * - Not in future
+     * - Not more than 10 years ago
+     */
+    fun validateDate(): String? {
+        val now = System.currentTimeMillis()
+        val tenYearsAgo = now - (MAX_PAST_YEARS * 365L * 24 * 60 * 60 * 1000)
+
+        return when {
+            date > now -> "Hike date cannot be in the future"
+            date < tenYearsAgo -> "Hike date cannot be more than $MAX_PAST_YEARS years ago"
+            else -> null
+        }
+    }
+
+    /**
+     * Validate description
+     * - Optional
+     * - Max 2000 characters
+     */
+    fun validateDescription(): String? {
+        return when {
+            description.length > DESCRIPTION_MAX_LENGTH ->
+                "Description must be less than $DESCRIPTION_MAX_LENGTH characters"
+            else -> null
+        }
+    }
+
+    /**
+     * Validate group size
+     * - 1-100 people
+     */
+    fun validateGroupSize(): String? {
+        return when {
+            groupSize < GROUP_SIZE_MIN -> "Group size must be at least $GROUP_SIZE_MIN"
+            groupSize > GROUP_SIZE_MAX -> "Group size must be less than $GROUP_SIZE_MAX"
+            else -> null
+        }
+    }
+
+    /**
+     * Validate images count
+     */
+    fun validateImages(): String? {
+        return when {
+            images.size > MAX_IMAGES -> "Maximum $MAX_IMAGES images allowed"
+            else -> null
+        }
+    }
+
+    /**
+     * Helper function to validate coordinates
+     */
+    private fun isValidCoordinates(coords: GeoPoint): Boolean {
+        return coords.latitude in -90.0..90.0 &&
+               coords.longitude in -180.0..180.0
+    }
 }
 
 /**

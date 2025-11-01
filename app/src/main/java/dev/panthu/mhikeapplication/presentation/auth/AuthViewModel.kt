@@ -237,10 +237,25 @@ class AuthViewModel @Inject constructor(
     }
 
     /**
-     * Start guest data migration to cloud
+     * Start guest data migration to cloud with auth validation
      */
     private fun startMigration(guestId: String, newUserId: String) {
         viewModelScope.launch {
+            // CRITICAL: Verify user is still authenticated before starting migration
+            val currentUser = authRepository.currentUser.value
+            if (currentUser == null || currentUser.uid != newUserId) {
+                _uiState.update {
+                    it.copy(
+                        error = "Authentication lost. Please sign in again to migrate your data.",
+                        migrationProgress = dev.panthu.mhikeapplication.domain.service.MigrationProgress.Error(
+                            message = "Authentication state changed. Migration aborted.",
+                            retryable = false
+                        )
+                    )
+                }
+                return@launch
+            }
+
             // First check if migration is needed
             when (val statsResult = migrationService.checkMigrationNeeded(guestId)) {
                 is Result.Success -> {
@@ -254,8 +269,23 @@ class AuthViewModel @Inject constructor(
                         it.copy(showMigrationDialog = true)
                     }
 
-                    // Start migration
+                    // Start migration with continuous auth verification
                     migrationService.migrateGuestData(guestId, newUserId).collect { progress ->
+                        // CRITICAL: Verify auth state hasn't changed during migration
+                        val stillAuthenticated = authRepository.currentUser.value
+                        if (stillAuthenticated == null || stillAuthenticated.uid != newUserId) {
+                            _uiState.update {
+                                it.copy(
+                                    error = "Authentication changed during migration. Migration aborted.",
+                                    migrationProgress = dev.panthu.mhikeapplication.domain.service.MigrationProgress.Error(
+                                        message = "Authentication lost during migration",
+                                        retryable = true
+                                    )
+                                )
+                            }
+                            return@collect
+                        }
+
                         _uiState.update {
                             it.copy(migrationProgress = progress)
                         }

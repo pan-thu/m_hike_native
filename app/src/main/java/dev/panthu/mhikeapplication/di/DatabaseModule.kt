@@ -29,6 +29,7 @@ object DatabaseModule {
             MHikeDatabase::class.java,
             MHikeDatabase.DATABASE_NAME
         )
+            .addMigrations(MHikeDatabase.MIGRATION_1_2)
             .fallbackToDestructiveMigration() // For development - remove in production
             .build()
     }

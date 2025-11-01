@@ -136,8 +136,14 @@ private fun MigratingHikesContent(state: MigrationProgress.MigratingHikes) {
         fontWeight = FontWeight.Bold
     )
 
+    val progress = if (state.total > 0) {
+        state.current.toFloat() / state.total
+    } else {
+        0f
+    }
+
     LinearProgressIndicator(
-        progress = { state.current.toFloat() / state.total },
+        progress = { progress },
         modifier = Modifier.fillMaxWidth()
     )
 
@@ -163,8 +169,14 @@ private fun MigratingObservationsContent(state: MigrationProgress.MigratingObser
         fontWeight = FontWeight.Bold
     )
 
+    val progress = if (state.total > 0) {
+        state.current.toFloat() / state.total
+    } else {
+        0f
+    }
+
     LinearProgressIndicator(
-        progress = { state.current.toFloat() / state.total },
+        progress = { progress },
         modifier = Modifier.fillMaxWidth()
     )
 

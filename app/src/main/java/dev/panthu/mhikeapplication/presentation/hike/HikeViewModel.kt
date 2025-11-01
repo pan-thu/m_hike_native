@@ -33,9 +33,10 @@ class HikeViewModel @Inject constructor(
     private val searchUsersUseCase: SearchUsersUseCase
 ) : ViewModel() {
 
-    // Get repository based on current auth state
-    private val hikeRepository: HikeRepository
-        get() = repositoryProvider.getHikeRepository()
+    // Get repository based on current auth state - synchronous version
+    // For proper safety, use getHikeRepository() (suspend) in coroutines
+    private val hikeRepositorySync: HikeRepository
+        get() = repositoryProvider.getHikeRepositorySync()
 
     private val _uiState = MutableStateFlow(HikeUiState())
     val uiState: StateFlow<HikeUiState> = _uiState.asStateFlow()
@@ -55,6 +56,12 @@ class HikeViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Cancel any ongoing upload jobs to prevent memory leaks
+        uploadJob?.cancel()
     }
 
     fun onEvent(event: HikeEvent) {
@@ -316,7 +323,9 @@ class HikeViewModel @Inject constructor(
                 updatedAt = Timestamp.now()
             )
 
-            when (val result = hikeRepository.createHike(hike)) {
+            // Get repository safely with mutex lock
+            val repository = repositoryProvider.getHikeRepository()
+            when (val result = repository.createHike(hike)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
@@ -344,7 +353,9 @@ class HikeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            when (val result = hikeRepository.getHike(hikeId)) {
+            // Get repository safely with mutex lock
+            val repository = repositoryProvider.getHikeRepository()
+            when (val result = repository.getHike(hikeId)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
@@ -375,7 +386,9 @@ class HikeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            when (val result = hikeRepository.deleteHike(hikeId)) {
+            // Get repository safely with mutex lock
+            val repository = repositoryProvider.getHikeRepository()
+            when (val result = repository.deleteHike(hikeId)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(
@@ -404,7 +417,9 @@ class HikeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
-            hikeRepository.getAllHikes(userId).collectLatest { result ->
+            // Get repository safely with mutex lock
+            val repository = repositoryProvider.getHikeRepository()
+            repository.getAllHikes(userId).collectLatest { result ->
                 when (result) {
                     is Result.Success -> {
                         _uiState.update {
@@ -461,7 +476,9 @@ class HikeViewModel @Inject constructor(
 
     private fun shareHike(hikeId: String, userId: String) {
         viewModelScope.launch {
-            when (val result = hikeRepository.shareHike(hikeId, userId)) {
+            // Get repository safely with mutex lock
+            val repository = repositoryProvider.getHikeRepository()
+            when (val result = repository.shareHike(hikeId, userId)) {
                 is Result.Success -> {
                     loadHike(hikeId) // Reload to get updated access control
                 }
@@ -477,7 +494,9 @@ class HikeViewModel @Inject constructor(
 
     private fun revokeAccess(hikeId: String, userId: String) {
         viewModelScope.launch {
-            when (val result = hikeRepository.revokeAccess(hikeId, userId)) {
+            // Get repository safely with mutex lock
+            val repository = repositoryProvider.getHikeRepository()
+            when (val result = repository.revokeAccess(hikeId, userId)) {
                 is Result.Success -> {
                     loadHike(hikeId) // Reload to get updated access control
                 }

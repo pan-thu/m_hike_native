@@ -35,7 +35,7 @@ data class HikeEntity(
 
     // Images (JSON array of local paths)
     val coverImageUrl: String,
-    val imageUrls: String, // JSON array
+    val imageUrls: String? = null, // JSON array (nullable for safety)
 
     // Timestamps
     val createdAt: Long,

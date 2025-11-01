@@ -36,7 +36,7 @@ data class ObservationEntity(
     val locationLng: Double?,
 
     // Images (JSON array of local paths)
-    val imageUrls: String, // JSON array
+    val imageUrls: String? = null, // JSON array (nullable for safety)
 
     // Optional comments
     val comments: String,
