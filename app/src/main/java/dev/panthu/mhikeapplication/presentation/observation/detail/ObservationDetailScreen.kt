@@ -271,7 +271,12 @@ fun ObservationDetailScreen(
                         )
 
                         ImageGrid(
-                            imageUrls = observation.imageUrls,
+                            images = observation.imageUrls.mapIndexed { index, url ->
+                                dev.panthu.mhikeapplication.domain.model.ImageMetadata(
+                                    id = "img_$index",
+                                    url = url
+                                )
+                            },
                             onImageClick = { /* TODO: Full screen viewer */ }
                         )
                     }

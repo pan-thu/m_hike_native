@@ -33,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import dev.panthu.mhikeapplication.domain.model.Observation
 import dev.panthu.mhikeapplication.presentation.observation.ObservationEvent
 import dev.panthu.mhikeapplication.presentation.observation.ObservationViewModel
@@ -164,7 +164,7 @@ private fun ObservationCard(
 
                     if (observation.hasLocation()) {
                         Icon(
-                            imageVector = Icons.Default.LocationOn,
+                            imageVector = Icons.Filled.LocationOn,
                             contentDescription = "Has location",
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.primary

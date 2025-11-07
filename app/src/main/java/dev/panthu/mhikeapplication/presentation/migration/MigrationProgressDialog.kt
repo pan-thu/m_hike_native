@@ -219,7 +219,7 @@ private fun CompleteContent(
     onDismiss: () -> Unit
 ) {
     Icon(
-        imageVector = Icons.Default.CheckCircle,
+        imageVector = Icons.Filled.CheckCircle,
         contentDescription = "Success",
         tint = MaterialTheme.colorScheme.primary,
         modifier = Modifier.size(64.dp)
@@ -313,7 +313,7 @@ private fun ErrorContent(
     onRetry: () -> Unit
 ) {
     Icon(
-        imageVector = Icons.Default.Error,
+        imageVector = Icons.Filled.Error,
         contentDescription = "Error",
         tint = MaterialTheme.colorScheme.error,
         modifier = Modifier.size(64.dp)

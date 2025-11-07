@@ -341,7 +341,7 @@ class LocalImageRepository @Inject constructor(
 
                     // Null check for listFiles() which can return null
                     if (files == null) {
-                        Log.w("LocalImageRepository", "Unable to list files in: ${currentDir.path}")
+                        android.util.Log.w("LocalImageRepository", "Unable to list files in: ${currentDir.path}")
                         continue
                     }
 

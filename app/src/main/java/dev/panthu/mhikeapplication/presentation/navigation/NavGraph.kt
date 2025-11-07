@@ -147,7 +147,8 @@ fun NavGraph(
                 hikeId = hikeId,
                 onNavigateBack = {
                     navController.popBackStack()
-                }
+                },
+                getCurrentLocationUseCase = getCurrentLocationUseCase
             )
         }
 

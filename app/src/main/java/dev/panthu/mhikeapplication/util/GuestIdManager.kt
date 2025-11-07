@@ -2,6 +2,7 @@ package dev.panthu.mhikeapplication.util
 
 import android.content.Context
 import android.content.SharedPreferences
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -11,7 +12,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class GuestIdManager @Inject constructor(
-    private val context: Context
+    @ApplicationContext private val context: Context
 ) {
     private val prefs: SharedPreferences? by lazy {
         try {
@@ -69,39 +70,62 @@ class GuestIdManager @Inject constructor(
      * Check if user has completed onboarding
      */
     fun hasCompletedOnboarding(): Boolean {
-        return prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false)
+        return try {
+            prefs?.getBoolean(KEY_ONBOARDING_COMPLETE, false) ?: false
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to check onboarding status", e)
+            false
+        }
     }
 
     /**
      * Mark onboarding as complete
      */
     fun setOnboardingComplete() {
-        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETE, true).apply()
+        try {
+            prefs?.edit()?.putBoolean(KEY_ONBOARDING_COMPLETE, true)?.apply()
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to set onboarding complete", e)
+        }
     }
 
     /**
      * Check if user was previously a guest (for migration detection)
      */
     fun wasGuest(): Boolean {
-        return prefs.getBoolean(KEY_WAS_GUEST, false)
+        return try {
+            prefs?.getBoolean(KEY_WAS_GUEST, false) ?: false
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to check was guest status", e)
+            false
+        }
     }
 
     /**
      * Mark user as former guest (for migration tracking)
      */
     fun markAsFormerGuest() {
-        prefs.edit().putBoolean(KEY_WAS_GUEST, true).apply()
+        try {
+            prefs?.edit()?.putBoolean(KEY_WAS_GUEST, true)?.apply()
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to mark as former guest", e)
+        }
     }
 
     /**
      * Get the last authentication mode used
      */
     fun getLastAuthMode(): AuthMode {
-        val mode = prefs.getString(KEY_LAST_AUTH_MODE, null)
-        return when (mode) {
-            "guest" -> AuthMode.GUEST
-            "authenticated" -> AuthMode.AUTHENTICATED
-            else -> AuthMode.NONE
+        return try {
+            val mode = prefs?.getString(KEY_LAST_AUTH_MODE, null)
+            when (mode) {
+                "guest" -> AuthMode.GUEST
+                "authenticated" -> AuthMode.AUTHENTICATED
+                else -> AuthMode.NONE
+            }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to get last auth mode", e)
+            AuthMode.NONE
         }
     }
 
@@ -109,15 +133,19 @@ class GuestIdManager @Inject constructor(
      * Save the current authentication mode
      */
     fun setLastAuthMode(mode: AuthMode) {
-        val modeString = when (mode) {
-            AuthMode.GUEST -> "guest"
-            AuthMode.AUTHENTICATED -> "authenticated"
-            AuthMode.NONE -> null
-        }
-        if (modeString != null) {
-            prefs.edit().putString(KEY_LAST_AUTH_MODE, modeString).apply()
-        } else {
-            prefs.edit().remove(KEY_LAST_AUTH_MODE).apply()
+        try {
+            val modeString = when (mode) {
+                AuthMode.GUEST -> "guest"
+                AuthMode.AUTHENTICATED -> "authenticated"
+                AuthMode.NONE -> null
+            }
+            if (modeString != null) {
+                prefs?.edit()?.putString(KEY_LAST_AUTH_MODE, modeString)?.apply()
+            } else {
+                prefs?.edit()?.remove(KEY_LAST_AUTH_MODE)?.apply()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to set last auth mode", e)
         }
     }
 
@@ -125,7 +153,11 @@ class GuestIdManager @Inject constructor(
      * Reset all guest-related data (for testing or fresh start)
      */
     fun resetAll() {
-        prefs.edit().clear().apply()
+        try {
+            prefs?.edit()?.clear()?.apply()
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to reset all data", e)
+        }
     }
 
     private fun generateGuestId(): String {

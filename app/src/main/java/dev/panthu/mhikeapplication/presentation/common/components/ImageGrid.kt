@@ -29,7 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import dev.panthu.mhikeapplication.domain.model.ImageMetadata
 
 /**
@@ -127,7 +127,7 @@ private fun ImageGridItem(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.BrokenImage,
+                            imageVector = Icons.Filled.BrokenImage,
                             contentDescription = "Failed to load image",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(32.dp)
@@ -152,7 +152,7 @@ private fun ImageGridItem(
                         )
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Close,
+                            imageVector = Icons.Filled.Close,
                             contentDescription = "Delete image",
                             tint = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier

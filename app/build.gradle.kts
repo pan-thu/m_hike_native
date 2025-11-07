@@ -5,17 +5,17 @@ plugins {
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.google.services)
     alias(libs.plugins.kotlin.kapt)
-    kotlin("plugin.serialization") version "1.9.20"
+    kotlin("plugin.serialization") version "2.0.21"
 }
 
 android {
     namespace = "dev.panthu.mhikeapplication"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "dev.panthu.mhikeapplication"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation("androidx.compose.material:material-icons-extended:1.7.5")
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
@@ -82,13 +83,13 @@ dependencies {
     // Location
     implementation(libs.play.services.location)
 
-    // Room (Local Database)
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
+    // Room (Local Database) - Updated to support Kotlin 2.0+ metadata
+    implementation("androidx.room:room-runtime:2.7.0-alpha10")
+    implementation("androidx.room:room-ktx:2.7.0-alpha10")
+    kapt("androidx.room:room-compiler:2.7.0-alpha10")
 
     // Kotlinx Serialization (for JSON conversion in Room)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     // Testing
     testImplementation(libs.junit)

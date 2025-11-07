@@ -17,10 +17,12 @@ import dev.panthu.mhikeapplication.domain.service.MigrationResult
 import dev.panthu.mhikeapplication.domain.service.MigrationService
 import dev.panthu.mhikeapplication.domain.service.MigrationStats
 import dev.panthu.mhikeapplication.util.Result
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -100,7 +102,7 @@ class MigrationServiceImpl @Inject constructor(
             val statsResult = checkMigrationNeeded(guestId)
             if (statsResult is Result.Error) {
                 emit(MigrationProgress.Error(statsResult.message ?: "Failed to check migration data"))
-                return@flow
+                return@withTimeout
             }
 
             val stats = (statsResult as Result.Success).data
@@ -112,7 +114,7 @@ class MigrationServiceImpl @Inject constructor(
                         uploadedImages = 0
                     )
                 ))
-                return@flow
+                return@withTimeout
             }
 
             emit(MigrationProgress.Initializing(stats))
@@ -360,17 +362,44 @@ class MigrationServiceImpl @Inject constructor(
             }
 
             // Upload to Firebase Storage
-            when (val result = imageRepository.uploadImage(uri, hikeId, observationId)) {
-                is Result.Success -> {
-                    Log.d(TAG, "Successfully uploaded image: ${file.name}")
-                    result.data.url
+            var uploadUrl: String? = null
+            var uploadError: String? = null
+
+            imageRepository.uploadImage(uri, hikeId, observationId).collect { result ->
+                when (result) {
+                    is Result.Success -> {
+                        val progress = result.data
+                        if (progress.isComplete) {
+                            // Upload complete - get download URL
+                            val downloadUrlResult = imageRepository.getDownloadUrl(
+                                if (observationId != null) {
+                                    "hikes/$hikeId/observations/$observationId/images/${progress.imageId}.jpg"
+                                } else {
+                                    "hikes/$hikeId/images/${progress.imageId}.jpg"
+                                }
+                            )
+                            when (downloadUrlResult) {
+                                is Result.Success -> {
+                                    uploadUrl = downloadUrlResult.data
+                                    Log.d(TAG, "Successfully uploaded image: ${file.name}")
+                                }
+                                is Result.Error -> {
+                                    uploadError = downloadUrlResult.message
+                                    Log.e(TAG, "Failed to get download URL: ${downloadUrlResult.message}")
+                                }
+                                is Result.Loading -> { /* No action */ }
+                            }
+                        }
+                    }
+                    is Result.Error -> {
+                        uploadError = result.message
+                        Log.e(TAG, "Upload failed: ${result.message}")
+                    }
+                    is Result.Loading -> { /* No action */ }
                 }
-                is Result.Error -> {
-                    Log.e(TAG, "Upload failed: ${result.message}")
-                    null
-                }
-                is Result.Loading -> null
             }
+
+            uploadUrl
         } catch (e: Exception) {
             Log.e(TAG, "Unexpected error uploading image", e)
             null
@@ -540,8 +569,8 @@ class MigrationServiceImpl @Inject constructor(
 
             Log.i(TAG, "Verification passed. Deleting ${verificationResult.verifiedHikeIds.size} verified hikes")
 
-            // Step 2: Only delete verified items
-            val localHikes = hikeDao.getUnsyncedHikes().filter { it.ownerId == guestId }
+            // Step 2: Only delete verified items that have been synced
+            val localHikes = hikeDao.getSyncedHikes(guestId)
             var deletedCount = 0
 
             localHikes.filter { it.id in verificationResult.verifiedHikeIds }.forEach { hike ->

@@ -1,10 +1,9 @@
 package dev.panthu.mhikeapplication.domain.provider
 
 import android.util.Log
+import dev.panthu.mhikeapplication.domain.repository.AuthRepository
 import dev.panthu.mhikeapplication.domain.repository.HikeRepository
 import dev.panthu.mhikeapplication.domain.repository.ObservationRepository
-import dev.panthu.mhikeapplication.presentation.auth.AuthViewModel
-import dev.panthu.mhikeapplication.presentation.auth.AuthenticationState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,7 +38,7 @@ class DynamicRepositoryProvider @Inject constructor(
     @Named("remote") private val remoteHikeRepo: HikeRepository,
     @Named("local") private val localObservationRepo: ObservationRepository,
     @Named("remote") private val remoteObservationRepo: ObservationRepository,
-    private val authViewModel: AuthViewModel
+    private val authRepository: AuthRepository
 ) : RepositoryProvider {
 
     companion object {
@@ -53,13 +52,14 @@ class DynamicRepositoryProvider @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // StateFlow for thread-safe auth state observation
-    private val authState: StateFlow<AuthenticationState> = authViewModel.uiState
-        .map { it.authState }
+    // Maps currentUser flow to boolean: authenticated if user exists, otherwise not
+    private val isAuthenticated: StateFlow<Boolean> = authRepository.currentUser
+        .map { user -> user != null }
         .distinctUntilChanged()
         .stateIn(
             scope = scope,
             started = SharingStarted.Eagerly,
-            initialValue = AuthenticationState.Unauthenticated
+            initialValue = false
         )
 
     /**
@@ -67,13 +67,10 @@ class DynamicRepositoryProvider @Inject constructor(
      * Thread-safe with mutex lock to prevent race conditions
      */
     override suspend fun getHikeRepository(): HikeRepository = repositoryMutex.withLock {
-        val currentState = authState.value
-        Log.d(TAG, "Selecting hike repository for auth state: $currentState")
+        val authenticated = isAuthenticated.value
+        Log.d(TAG, "Selecting hike repository - authenticated: $authenticated")
 
-        when (currentState) {
-            is AuthenticationState.Authenticated -> remoteHikeRepo
-            else -> localHikeRepo // Guest or Unauthenticated
-        }
+        if (authenticated) remoteHikeRepo else localHikeRepo
     }
 
     /**
@@ -81,13 +78,10 @@ class DynamicRepositoryProvider @Inject constructor(
      * Thread-safe with mutex lock to prevent race conditions
      */
     override suspend fun getObservationRepository(): ObservationRepository = repositoryMutex.withLock {
-        val currentState = authState.value
-        Log.d(TAG, "Selecting observation repository for auth state: $currentState")
+        val authenticated = isAuthenticated.value
+        Log.d(TAG, "Selecting observation repository - authenticated: $authenticated")
 
-        when (currentState) {
-            is AuthenticationState.Authenticated -> remoteObservationRepo
-            else -> localObservationRepo // Guest or Unauthenticated
-        }
+        if (authenticated) remoteObservationRepo else localObservationRepo
     }
 
     /**
@@ -95,11 +89,8 @@ class DynamicRepositoryProvider @Inject constructor(
      * Note: May have slight delay if auth state is transitioning
      */
     override fun getHikeRepositorySync(): HikeRepository {
-        val currentState = authState.value
-        return when (currentState) {
-            is AuthenticationState.Authenticated -> remoteHikeRepo
-            else -> localHikeRepo
-        }
+        val authenticated = isAuthenticated.value
+        return if (authenticated) remoteHikeRepo else localHikeRepo
     }
 
     /**
@@ -107,10 +98,7 @@ class DynamicRepositoryProvider @Inject constructor(
      * Note: May have slight delay if auth state is transitioning
      */
     override fun getObservationRepositorySync(): ObservationRepository {
-        val currentState = authState.value
-        return when (currentState) {
-            is AuthenticationState.Authenticated -> remoteObservationRepo
-            else -> localObservationRepo
-        }
+        val authenticated = isAuthenticated.value
+        return if (authenticated) remoteObservationRepo else localObservationRepo
     }
 }

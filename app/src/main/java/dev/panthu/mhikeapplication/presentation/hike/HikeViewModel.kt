@@ -355,24 +355,26 @@ class HikeViewModel @Inject constructor(
 
             // Get repository safely with mutex lock
             val repository = repositoryProvider.getHikeRepository()
-            when (val result = repository.getHike(hikeId)) {
-                is Result.Success -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            currentHike = result.data
-                        )
+            repository.getHike(hikeId).collect { result ->
+                when (result) {
+                    is Result.Success<*> -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                currentHike = result.data as? dev.panthu.mhikeapplication.domain.model.Hike
+                            )
+                        }
                     }
-                }
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = result.message ?: "Failed to load hike"
-                        )
+                    is Result.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = result.message ?: "Failed to load hike"
+                            )
+                        }
                     }
+                    is Result.Loading -> { /* Already handled */ }
                 }
-                is Result.Loading -> { /* Already handled */ }
             }
         }
     }
@@ -386,9 +388,20 @@ class HikeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
+            val userId = currentUserId
+            if (userId == null) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "You must be logged in to delete hikes"
+                    )
+                }
+                return@launch
+            }
+
             // Get repository safely with mutex lock
             val repository = repositoryProvider.getHikeRepository()
-            when (val result = repository.deleteHike(hikeId)) {
+            when (val result = repository.deleteHike(hikeId, userId)) {
                 is Result.Success -> {
                     _uiState.update {
                         it.copy(

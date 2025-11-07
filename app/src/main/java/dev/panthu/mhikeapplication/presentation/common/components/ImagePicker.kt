@@ -78,7 +78,7 @@ fun ImagePicker(
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Cancel,
+                            imageVector = Icons.Filled.Cancel,
                             contentDescription = "Cancel upload",
                             tint = MaterialTheme.colorScheme.error
                         )
@@ -95,7 +95,7 @@ fun ImagePicker(
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AddPhotoAlternate,
+                            imageVector = Icons.Filled.AddPhotoAlternate,
                             contentDescription = "Add image",
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -174,7 +174,7 @@ fun ImagePickerButton(
         uri?.let { onImageSelected(it) }
     }
 
-    MHikeOutlinedButton(
+    MHikeSecondaryButton(
         text = "Add Image",
         onClick = {
             photoPickerLauncher.launch(

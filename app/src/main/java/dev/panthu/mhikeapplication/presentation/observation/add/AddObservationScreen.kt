@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import dev.panthu.mhikeapplication.domain.usecase.GetCurrentLocationUseCase
 import dev.panthu.mhikeapplication.presentation.common.components.LocationPicker
 import dev.panthu.mhikeapplication.presentation.common.components.MHikePrimaryButton
 import dev.panthu.mhikeapplication.presentation.common.components.MHikeTextField
@@ -49,6 +50,7 @@ import java.util.Locale
 fun AddObservationScreen(
     hikeId: String,
     onNavigateBack: () -> Unit,
+    getCurrentLocationUseCase: GetCurrentLocationUseCase,
     viewModel: ObservationViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -122,7 +124,6 @@ fun AddObservationScreen(
                 placeholder = "Describe what you saw, heard, or experienced",
                 isError = formState.textError != null,
                 errorMessage = formState.textError,
-                minLines = 4,
                 maxLines = 8,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -153,7 +154,6 @@ fun AddObservationScreen(
                 onValueChange = { viewModel.onEvent(ObservationEvent.CommentsChanged(it)) },
                 label = "Comments (optional)",
                 placeholder = "Any additional notes",
-                minLines = 2,
                 maxLines = 4,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -166,10 +166,11 @@ fun AddObservationScreen(
             )
 
             LocationPicker(
-                location = formState.location,
-                onLocationSelected = { location ->
+                location = formState.location ?: dev.panthu.mhikeapplication.domain.model.Location(),
+                onLocationChange = { location ->
                     viewModel.onEvent(ObservationEvent.LocationChanged(location))
                 },
+                getCurrentLocationUseCase = getCurrentLocationUseCase,
                 modifier = Modifier.fillMaxWidth()
             )
 

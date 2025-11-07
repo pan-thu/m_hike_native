@@ -33,13 +33,17 @@ class LocalObservationRepositoryImpl @Inject constructor(
 
     override fun getObservationsForHike(hikeId: String): Flow<Result<List<Observation>>> {
         return observationDao.getObservationsForHike(hikeId)
-            .map { entities -> Result.Success(entities.toDomainObservationList()) }
+            .map<List<dev.panthu.mhikeapplication.data.local.entity.ObservationEntity>, Result<List<Observation>>> {
+                entities -> Result.Success(entities.toDomainObservationList())
+            }
             .catch { emit(Result.Error(it.message ?: "Failed to load observations")) }
     }
 
     override fun getObservation(hikeId: String, observationId: String): Flow<Result<Observation?>> {
         return observationDao.getObservation(observationId)
-            .map { entity -> Result.Success(entity?.toDomain()) }
+            .map<dev.panthu.mhikeapplication.data.local.entity.ObservationEntity?, Result<Observation?>> {
+                entity -> Result.Success(entity?.toDomain())
+            }
             .catch { emit(Result.Error(it.message ?: "Failed to load observation")) }
     }
 

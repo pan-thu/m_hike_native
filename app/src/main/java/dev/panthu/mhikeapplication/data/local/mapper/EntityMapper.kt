@@ -31,7 +31,7 @@ fun HikeEntity.toDomain(): Hike {
             name = locationName,
             coordinates = if (locationLat != null && locationLng != null) {
                 GeoPoint(locationLat, locationLng)
-            } else null
+            } else GeoPoint(0.0, 0.0)
         ),
         date = Timestamp(Date(date)),
         length = length,
@@ -57,9 +57,8 @@ fun HikeEntity.toDomain(): Hike {
             emptyList()
         },
         accessControl = AccessControl(
-            ownerId = ownerId,
             invitedUsers = emptyList(), // Local storage doesn't have social features
-            sharedWith = emptyList()
+            sharedUsers = emptyList()
         ),
         createdAt = Timestamp(Date(createdAt)),
         updatedAt = Timestamp(Date(updatedAt))

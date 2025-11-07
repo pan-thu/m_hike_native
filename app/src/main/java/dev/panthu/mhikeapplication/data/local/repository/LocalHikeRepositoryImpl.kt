@@ -35,19 +35,25 @@ class LocalHikeRepositoryImpl @Inject constructor(
 
     override fun getAllHikes(userId: String): Flow<Result<List<Hike>>> {
         return hikeDao.getAllHikes(userId)
-            .map { entities -> Result.Success(entities.toDomainList()) }
+            .map<List<dev.panthu.mhikeapplication.data.local.entity.HikeEntity>, Result<List<Hike>>> {
+                entities -> Result.Success(entities.toDomainList())
+            }
             .catch { emit(Result.Error(it.message ?: "Failed to load hikes")) }
     }
 
     override fun getHike(hikeId: String): Flow<Result<Hike?>> {
         return hikeDao.getHike(hikeId)
-            .map { entity -> Result.Success(entity?.toDomain()) }
+            .map<dev.panthu.mhikeapplication.data.local.entity.HikeEntity?, Result<Hike?>> {
+                entity -> Result.Success(entity?.toDomain())
+            }
             .catch { emit(Result.Error(it.message ?: "Failed to load hike")) }
     }
 
     override fun getMyHikes(userId: String): Flow<Result<List<Hike>>> {
         return hikeDao.getMyHikes(userId)
-            .map { entities -> Result.Success(entities.toDomainList()) }
+            .map<List<dev.panthu.mhikeapplication.data.local.entity.HikeEntity>, Result<List<Hike>>> {
+                entities -> Result.Success(entities.toDomainList())
+            }
             .catch { emit(Result.Error(it.message ?: "Failed to load your hikes")) }
     }
 

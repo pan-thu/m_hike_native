@@ -126,7 +126,7 @@ fun LocationPicker(
                             }
                         ) {
                             Icon(
-                                imageVector = Icons.Default.MyLocation,
+                                imageVector = Icons.Filled.MyLocation,
                                 contentDescription = "Use current location",
                                 tint = MaterialTheme.colorScheme.primary
                             )

@@ -12,6 +12,7 @@ import dev.panthu.mhikeapplication.util.Result
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -242,7 +243,7 @@ class AuthViewModel @Inject constructor(
     private fun startMigration(guestId: String, newUserId: String) {
         viewModelScope.launch {
             // CRITICAL: Verify user is still authenticated before starting migration
-            val currentUser = authRepository.currentUser.value
+            val currentUser = authRepository.currentUser.firstOrNull()
             if (currentUser == null || currentUser.uid != newUserId) {
                 _uiState.update {
                     it.copy(
@@ -272,7 +273,7 @@ class AuthViewModel @Inject constructor(
                     // Start migration with continuous auth verification
                     migrationService.migrateGuestData(guestId, newUserId).collect { progress ->
                         // CRITICAL: Verify auth state hasn't changed during migration
-                        val stillAuthenticated = authRepository.currentUser.value
+                        val stillAuthenticated = authRepository.currentUser.firstOrNull()
                         if (stillAuthenticated == null || stillAuthenticated.uid != newUserId) {
                             _uiState.update {
                                 it.copy(

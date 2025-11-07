@@ -96,7 +96,7 @@ class ImageRepositoryImpl @Inject constructor(
                 val progress = UploadProgress(
                     imageId = imageId,
                     bytesTransferred = taskSnapshot.bytesTransferred,
-                    totalBytes = taskSnapshot.totalBytesTransferred,
+                    totalBytes = taskSnapshot.totalByteCount,
                     isComplete = false
                 )
                 trySend(Result.Success(progress))

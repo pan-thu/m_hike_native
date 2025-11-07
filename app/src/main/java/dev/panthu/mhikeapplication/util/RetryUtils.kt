@@ -147,12 +147,12 @@ object RetryUtils {
                 val result = block()
                 when (result) {
                     is Result.Success -> result
-                    is Result.Error -> throw Exception(result.message)
+                    is Result.Error -> throw result.exception
                     is Result.Loading -> result // Don't retry loading state
                 }
             }
         } catch (e: Exception) {
-            Result.Error(e.message ?: "$operation failed after retries")
+            Result.Error(e, e.message ?: "$operation failed after retries")
         }
     }
 

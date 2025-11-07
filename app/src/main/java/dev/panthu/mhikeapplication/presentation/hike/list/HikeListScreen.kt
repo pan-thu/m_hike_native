@@ -46,7 +46,7 @@ fun HikeListScreen(
     }
 
     Scaffold(
-        topAppBar = {
+        topBar = {
             TopAppBar(
                 title = { Text("My Hikes") }
             )
@@ -57,7 +57,7 @@ fun HikeListScreen(
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
+                    imageVector = Icons.Filled.Add,
                     contentDescription = "Create hike"
                 )
             }

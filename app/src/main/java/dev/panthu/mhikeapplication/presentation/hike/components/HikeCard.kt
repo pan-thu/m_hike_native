@@ -29,7 +29,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import dev.panthu.mhikeapplication.domain.model.Difficulty
 import dev.panthu.mhikeapplication.domain.model.Hike
 import java.text.SimpleDateFormat
@@ -102,7 +102,7 @@ fun HikeCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.LocationOn,
+                        imageVector = Icons.Filled.LocationOn,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -124,7 +124,7 @@ fun HikeCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.CalendarToday,
+                        imageVector = Icons.Filled.CalendarToday,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -150,14 +150,14 @@ fun HikeCard(
 
                     // Length chip
                     InfoChip(
-                        icon = Icons.Default.DirectionsWalk,
+                        icon = Icons.Filled.DirectionsWalk,
                         text = "${hike.length} km"
                     )
 
                     // Parking chip (if available)
                     if (hike.hasParking) {
                         InfoChip(
-                            icon = Icons.Default.LocalParking,
+                            icon = Icons.Filled.LocalParking,
                             text = "Parking"
                         )
                     }

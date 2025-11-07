@@ -40,7 +40,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import dev.panthu.mhikeapplication.domain.model.Difficulty
 import dev.panthu.mhikeapplication.presentation.auth.AuthViewModel
 import dev.panthu.mhikeapplication.presentation.auth.AuthenticationState
@@ -81,7 +81,7 @@ fun HikeDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.Filled.ArrowBack,
                             contentDescription = "Navigate back"
                         )
                     }
@@ -91,7 +91,7 @@ fun HikeDetailScreen(
                     if (isAuthenticated) {
                         IconButton(onClick = { onShare(hikeId) }) {
                             Icon(
-                                imageVector = Icons.Default.Share,
+                                imageVector = Icons.Filled.Share,
                                 contentDescription = "Share hike"
                             )
                         }
@@ -100,7 +100,7 @@ fun HikeDetailScreen(
                         onClick = { viewModel.onEvent(HikeEvent.DeleteHike(hikeId)) }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
+                            imageVector = Icons.Filled.Delete,
                             contentDescription = "Delete hike"
                         )
                     }
@@ -161,19 +161,19 @@ fun HikeDetailScreen(
 
                         // Info cards
                         InfoSection(
-                            icon = Icons.Default.LocationOn,
+                            icon = Icons.Filled.LocationOn,
                             label = "Location",
                             value = hike.location.name
                         )
 
                         InfoSection(
-                            icon = Icons.Default.CalendarToday,
+                            icon = Icons.Filled.CalendarToday,
                             label = "Date",
                             value = formatDate(hike.date.toDate())
                         )
 
                         InfoSection(
-                            icon = Icons.Default.DirectionsWalk,
+                            icon = Icons.Filled.DirectionsWalk,
                             label = "Length",
                             value = "${hike.length} km"
                         )
@@ -324,7 +324,7 @@ private fun ParkingBadge(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.LocalParking,
+                imageVector = Icons.Filled.LocalParking,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )

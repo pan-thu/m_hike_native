@@ -27,12 +27,12 @@ fun StorageIndicator(
 ) {
     val (icon, text, color) = when (storageType) {
         StorageType.LOCAL -> Triple(
-            Icons.Default.PhoneAndroid,
+            Icons.Filled.PhoneAndroid,
             "Device only",
             MaterialTheme.colorScheme.tertiaryContainer
         )
         StorageType.FIREBASE -> Triple(
-            Icons.Default.Cloud,
+            Icons.Filled.Cloud,
             "Cloud backup",
             MaterialTheme.colorScheme.primaryContainer
         )
@@ -110,11 +110,11 @@ fun StorageInfoCard(
     ) {
         val (icon, text) = when (storageType) {
             StorageType.LOCAL -> Pair(
-                Icons.Default.PhoneAndroid,
+                Icons.Filled.PhoneAndroid,
                 "$imageCount image(s) stored on this device"
             )
             StorageType.FIREBASE -> Pair(
-                Icons.Default.Cloud,
+                Icons.Filled.Cloud,
                 "$imageCount image(s) backed up to cloud"
             )
         }

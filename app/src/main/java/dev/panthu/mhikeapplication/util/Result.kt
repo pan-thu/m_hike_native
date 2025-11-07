@@ -2,7 +2,11 @@ package dev.panthu.mhikeapplication.util
 
 sealed class Result<out T> {
     data class Success<out T>(val data: T) : Result<T>()
-    data class Error(val exception: Exception, val message: String? = null) : Result<Nothing>()
+    data class Error(val exception: Exception, val message: String? = null) : Result<Nothing>() {
+        companion object {
+            operator fun invoke(message: String): Error = Error(Exception(message), message)
+        }
+    }
     data object Loading : Result<Nothing>()
 
     val isSuccess: Boolean

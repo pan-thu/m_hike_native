@@ -224,24 +224,26 @@ class ObservationViewModel @Inject constructor(
 
             // Get repository safely with mutex lock
             val repository = repositoryProvider.getObservationRepository()
-            when (val result = repository.getObservation(hikeId, observationId)) {
-                is Result.Success -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            currentObservation = result.data
-                        )
+            repository.getObservation(hikeId, observationId).collect { result ->
+                when (result) {
+                    is Result.Success<*> -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                currentObservation = result.data as? dev.panthu.mhikeapplication.domain.model.Observation
+                            )
+                        }
                     }
-                }
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            error = result.message ?: "Failed to load observation"
-                        )
+                    is Result.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = result.message ?: "Failed to load observation"
+                            )
+                        }
                     }
+                    is Result.Loading -> { /* Already handled */ }
                 }
-                is Result.Loading -> { /* Already handled */ }
             }
         }
     }
