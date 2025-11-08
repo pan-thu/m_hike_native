@@ -1,7 +1,7 @@
 # Product Requirements Document: M-Hike Application
 
-**Version**: 2.0.0
-**Last Updated**: 2025-10-30
+**Version**: 2.1.0
+**Last Updated**: 2025-11-09
 **Architecture**: Hybrid Guest/Authenticated Mode
 
 ---
@@ -114,11 +114,12 @@ M-Hike is a simple, reliable Android app to plan hikes, record on-trail observat
 | **FR-07** | **Accounts: Signup, Login** | ❌ | ✅ | Email/password auth. Session persistence. |
 | **FR-08** | **Guest-to-Auth Migration** | N/A | ✅ | Automatic on signup. Uploads local images to Firebase, creates Firestore docs, preserves all data. Progress dialog with retry. |
 | **FR-09** | **User Discovery** | ❌ | ✅ | Search users by handle/email/name. Show profiles for selection. |
-| **FR-10** | **Hike Sharing** | ❌ Banner shown | ✅ | Share with users for read-only access. Owner can revoke. Real-time updates. |
-| **FR-11** | **Multi-Device Sync** | ❌ | ✅ | Hikes sync across devices automatically for authenticated users. |
-| **FR-12** | **Search & Filters** | ✅ | ✅ | Name search. Filters: location, length, date, difficulty. |
-| **FR-13** | **Guest Mode Indicators** | ✅ | N/A | Banners promoting authentication. Storage indicators (📱 vs ☁️). Clear messaging about limitations. |
-| **FR-14** | **Error & Permission Handling** | ✅ | ✅ | Graceful messages for invalid forms, denied permissions, upload failures, missing network. Never crash. |
+| **FR-10** | **Hike Sharing** | ❌ Feature hidden | ✅ | Share with users for read-only access. Separate "My Hikes" and "Shared Hikes" lists. Real-time updates. |
+| **FR-11** | **Shared Hikes View** | ❌ | ✅ | View hikes shared by others. Read-only access (no edit/share/delete). Separate screen from owned hikes. |
+| **FR-12** | **Multi-Device Sync** | ❌ | ✅ | Hikes sync across devices automatically for authenticated users. |
+| **FR-13** | **Search & Filters** | ✅ | ✅ | Name search. Filters: location, length, date, difficulty. Works on both My Hikes and Shared Hikes. |
+| **FR-14** | **Storage Indicators** | ✅ | ✅ | Storage indicators (📱 vs ☁️). Clear messaging about storage location. |
+| **FR-15** | **Error & Permission Handling** | ✅ | ✅ | Graceful messages for invalid forms, denied permissions, upload failures, missing network. Never crash. |
 
 ### 5.2. Non-Functional Requirements
 
@@ -165,6 +166,28 @@ sealed class AuthenticationState {
     data class Authenticated(val user: User)  // Cloud mode
 }
 ```
+
+### 6.3. Access Control Model
+
+```kotlin
+data class AccessControl(
+    val sharedWith: List<String> = emptyList()  // User IDs with read access
+) {
+    fun hasAccess(userId: String): Boolean = userId in sharedWith
+    fun addUser(userId: String): AccessControl
+    fun removeUser(userId: String): AccessControl
+
+    companion object {
+        // Migration support: Combines old invitedUsers + sharedUsers → sharedWith
+        fun fromMap(data: Map<String, Any>): AccessControl
+    }
+}
+```
+
+**Key Changes (v2.1)**:
+- Simplified from dual lists (`invitedUsers` + `sharedUsers`) to single `sharedWith` list
+- Backwards compatible: `fromMap()` migrates old Firestore data automatically
+- All shared users have identical read-only access regardless of when they were added
 
 ### 6.3. Data Migration Flow
 
