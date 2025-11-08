@@ -49,9 +49,15 @@ class LocalObservationRepositoryImpl @Inject constructor(
 
     override suspend fun createObservation(observation: Observation): Result<Observation> {
         return try {
-            val entity = observation.toEntity()
+            // Generate UUID if ID is empty
+            val observationWithId = if (observation.id.isEmpty()) {
+                observation.copy(id = java.util.UUID.randomUUID().toString())
+            } else {
+                observation
+            }
+            val entity = observationWithId.toEntity()
             observationDao.insert(entity)
-            Result.Success(observation)
+            Result.Success(observationWithId)
         } catch (e: Exception) {
             Result.Error(e.message ?: "Failed to create observation")
         }

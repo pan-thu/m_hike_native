@@ -43,12 +43,7 @@ interface HikeRepository {
     suspend fun deleteHike(hikeId: String, userId: String): Result<Unit>
 
     /**
-     * Add invited users during hike creation
-     */
-    suspend fun addInvitedUsers(hikeId: String, userIds: List<String>): Result<Unit>
-
-    /**
-     * Share hike with additional users (post-creation)
+     * Share hike with a user (grants read access)
      */
     suspend fun shareHike(hikeId: String, userId: String): Result<Unit>
 

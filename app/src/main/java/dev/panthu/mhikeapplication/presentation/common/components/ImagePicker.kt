@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
  * @param uploadProgress Optional upload progress (0.0 to 1.0)
  * @param isUploading Whether an upload is in progress
  * @param error Optional error message
+ * @param enabled Whether the picker is enabled
  * @param modifier Modifier for the component
  */
 @Composable
@@ -43,6 +44,7 @@ fun ImagePicker(
     isUploading: Boolean = false,
     error: String? = null,
     onCancelUpload: (() -> Unit)? = null,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -92,12 +94,14 @@ fun ImagePicker(
                                 )
                             )
                         },
+                        enabled = enabled,
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Filled.AddPhotoAlternate,
                             contentDescription = "Add image",
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = if (enabled) MaterialTheme.colorScheme.primary
+                                  else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         )
                     }
                 }
@@ -150,7 +154,8 @@ fun ImagePicker(
             if (!isUploading && error == null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Tap the + icon to add images (max 10MB, JPEG/PNG/WebP)",
+                    text = if (enabled) "Tap the + icon to add an image (max 10MB, JPEG/PNG/WebP)"
+                          else "Only 1 image allowed per hike",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

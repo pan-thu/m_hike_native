@@ -13,6 +13,7 @@ import dev.panthu.mhikeapplication.domain.model.User
 data class HikeUiState(
     val isLoading: Boolean = false,
     val hikes: List<Hike> = emptyList(),
+    val allHikes: List<Hike> = emptyList(), // All hikes before filtering
     val currentHike: Hike? = null,
     val error: String? = null,
     val isCreating: Boolean = false,
@@ -23,6 +24,7 @@ data class HikeUiState(
     val filterDifficulty: Difficulty? = null,
     val filterMinLength: Double? = null,
     val filterMaxLength: Double? = null,
+    val filterHasParking: Boolean? = null,
     val searchResults: List<User> = emptyList(),
     val isSearchingUsers: Boolean = false
 )
@@ -43,7 +45,6 @@ data class HikeFormState(
     val hasParking: Boolean = false,
     val description: String = "",
     val images: List<ImageMetadata> = emptyList(),
-    val invitedUsers: List<User> = emptyList(),
     val terrain: String = "",
     val groupSize: Int = 1,
 
@@ -62,7 +63,7 @@ data class HikeFormState(
         const val LENGTH_MAX_KM = 1000.0
         const val GROUP_SIZE_MIN = 1
         const val GROUP_SIZE_MAX = 100
-        const val MAX_IMAGES = 20
+        const val MAX_IMAGES = 1
         const val MAX_PAST_YEARS = 10
     }
 
@@ -121,18 +122,10 @@ data class HikeFormState(
 
     /**
      * Validate date
-     * - Not in future
-     * - Not more than 10 years ago
+     * - No validation - allow any date (past or future)
      */
     fun validateDate(): String? {
-        val now = System.currentTimeMillis()
-        val tenYearsAgo = now - (MAX_PAST_YEARS * 365L * 24 * 60 * 60 * 1000)
-
-        return when {
-            date > now -> "Hike date cannot be in the future"
-            date < tenYearsAgo -> "Hike date cannot be more than $MAX_PAST_YEARS years ago"
-            else -> null
-        }
+        return null // No date validation
     }
 
     /**
@@ -165,7 +158,7 @@ data class HikeFormState(
      */
     fun validateImages(): String? {
         return when {
-            images.size > MAX_IMAGES -> "Maximum $MAX_IMAGES images allowed"
+            images.size > MAX_IMAGES -> "Only $MAX_IMAGES image allowed"
             else -> null
         }
     }
@@ -197,9 +190,7 @@ sealed class HikeEvent {
     data class ImageDeleted(val image: ImageMetadata) : HikeEvent()
     data object CancelUpload : HikeEvent()
 
-    // User invitation events
-    data class UserInvited(val user: User) : HikeEvent()
-    data class UserUninvited(val user: User) : HikeEvent()
+    // User search events
     data class SearchUsers(val query: String) : HikeEvent()
 
     // CRUD events
@@ -210,9 +201,12 @@ sealed class HikeEvent {
 
     // List events
     data object LoadHikes : HikeEvent()
+    data object LoadMyHikes : HikeEvent()
+    data object LoadSharedHikes : HikeEvent()
     data class SearchHikes(val query: String) : HikeEvent()
     data class FilterByDifficulty(val difficulty: Difficulty?) : HikeEvent()
     data class FilterByLength(val min: Double?, val max: Double?) : HikeEvent()
+    data class FilterByParking(val hasParking: Boolean?) : HikeEvent()
     data object ClearFilters : HikeEvent()
 
     // Sharing events

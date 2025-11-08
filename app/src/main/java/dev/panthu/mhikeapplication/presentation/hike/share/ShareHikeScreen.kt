@@ -68,9 +68,7 @@ fun ShareHikeScreen(
     val currentUserId = authState.currentUser?.uid ?: ""
 
     // Get currently shared users
-    val sharedUserIds = currentHike?.accessControl?.let { access ->
-        access.invitedUsers + access.sharedUsers
-    }?.toSet() ?: emptySet()
+    val sharedUserIds = currentHike?.accessControl?.sharedWith?.toSet() ?: emptySet()
 
     // Load hike
     LaunchedEffect(hikeId) {
@@ -127,22 +125,6 @@ fun ShareHikeScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Disclaimer
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            ) {
-                Text(
-                    text = "Guests can view only",
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
             // Current access list
             if (sharedUserIds.isNotEmpty()) {
                 Text(

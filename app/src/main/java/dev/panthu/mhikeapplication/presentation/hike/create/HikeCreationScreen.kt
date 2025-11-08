@@ -1,6 +1,8 @@
 package dev.panthu.mhikeapplication.presentation.hike.create
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +16,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,12 +31,16 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,6 +51,7 @@ import dev.panthu.mhikeapplication.domain.usecase.GetCurrentLocationUseCase
 import dev.panthu.mhikeapplication.presentation.common.components.ImagePicker
 import dev.panthu.mhikeapplication.presentation.common.components.LocationPicker
 import dev.panthu.mhikeapplication.presentation.common.components.MHikePrimaryButton
+import dev.panthu.mhikeapplication.presentation.common.components.MHikeSecondaryButton
 import dev.panthu.mhikeapplication.presentation.common.components.MHikeTextField
 import dev.panthu.mhikeapplication.presentation.hike.HikeEvent
 import dev.panthu.mhikeapplication.presentation.hike.HikeViewModel
@@ -53,16 +62,41 @@ fun HikeCreationScreen(
     onNavigateBack: () -> Unit,
     onHikeCreated: (String) -> Unit,
     getCurrentLocationUseCase: GetCurrentLocationUseCase,
+    hikeId: String? = null, // Optional: if provided, screen is in edit mode
     viewModel: HikeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val formState by viewModel.formState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showDatePicker by remember { mutableStateOf(false) }
 
-    // Handle hike creation success
-    LaunchedEffect(uiState.currentHike) {
-        uiState.currentHike?.let { hike ->
-            onHikeCreated(hike.id)
+    val isEditMode = hikeId != null
+
+    // Load hike data if in edit mode
+    LaunchedEffect(hikeId) {
+        hikeId?.let {
+            viewModel.onEvent(HikeEvent.LoadHike(it))
+        }
+    }
+
+    // Handle hike creation/update success
+    // Only navigate after creation (not edit mode) or after successful update (when isCreating becomes false)
+    LaunchedEffect(uiState.currentHike, uiState.isCreating) {
+        if (!isEditMode) {
+            // Create mode: navigate when hike is created
+            uiState.currentHike?.let { hike ->
+                if (!uiState.isCreating) {
+                    onHikeCreated(hike.id)
+                }
+            }
+        } else {
+            // Edit mode: navigate only after successful update (when isCreating goes from true to false)
+            if (!uiState.isCreating && uiState.currentHike != null && uiState.error == null) {
+                // Check if we just finished updating (formState should be reset)
+                if (formState.name.isEmpty()) {
+                    onNavigateBack()
+                }
+            }
         }
     }
 
@@ -78,10 +112,39 @@ fun HikeCreationScreen(
         }
     }
 
+    // Date picker dialog
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = formState.date
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            viewModel.onEvent(HikeEvent.DateChanged(millis))
+                        }
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Create Hike") },
+                title = { Text(if (isEditMode) "Edit Hike" else "Create Hike") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -110,7 +173,7 @@ fun HikeCreationScreen(
             MHikeTextField(
                 value = formState.name,
                 onValueChange = { viewModel.onEvent(HikeEvent.NameChanged(it)) },
-                label = "Hike Name",
+                label = "Hike Name *",
                 placeholder = "e.g., Mount Hood Trail",
                 isError = formState.nameError != null,
                 errorMessage = formState.nameError,
@@ -126,23 +189,30 @@ fun HikeCreationScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Date picker (simplified - in real app use DatePicker)
-            MHikeTextField(
-                value = formatDate(formState.date),
-                onValueChange = { /* Handle date selection */ },
-                label = "Date",
-                placeholder = "Select date",
-                isError = formState.dateError != null,
-                errorMessage = formState.dateError,
-                enabled = false, // Make clickable to show date picker
-                modifier = Modifier.fillMaxWidth()
-            )
+            // Date picker
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showDatePicker = true }
+            ) {
+                MHikeTextField(
+                    value = formatDate(formState.date),
+                    onValueChange = { /* Handled by date picker */ },
+                    label = "Date *",
+                    placeholder = "Select date",
+                    isError = formState.dateError != null,
+                    errorMessage = formState.dateError,
+                    readOnly = true,
+                    enabled = !uiState.isCreating,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             // Length field
             MHikeTextField(
                 value = formState.length,
                 onValueChange = { viewModel.onEvent(HikeEvent.LengthChanged(it)) },
-                label = "Length (km)",
+                label = "Length (km) *",
                 placeholder = "e.g., 12.5",
                 isError = formState.lengthError != null,
                 errorMessage = formState.lengthError,
@@ -210,27 +280,59 @@ fun HikeCreationScreen(
                     .height(120.dp)
             )
 
-            // Image picker
+            // Image picker - limited to 1 image
             ImagePicker(
                 onImageSelected = { uri ->
-                    viewModel.onEvent(HikeEvent.ImageSelected(uri))
+                    // Only allow if no image already selected
+                    if (formState.images.isEmpty()) {
+                        viewModel.onEvent(HikeEvent.ImageSelected(uri))
+                    }
                 },
                 uploadProgress = uiState.uploadProgress,
                 isUploading = uiState.isUploading,
                 error = uiState.uploadError,
                 onCancelUpload = { viewModel.onEvent(HikeEvent.CancelUpload) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = formState.images.isEmpty() && !uiState.isUploading && !uiState.isCreating
             )
 
-            // Image grid would go here for displaying selected images
-            // ImageGrid(images = formState.images, ...)
+            // Display selected image
+            if (formState.images.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "1 image selected",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    MHikeSecondaryButton(
+                        text = "Remove",
+                        onClick = {
+                            formState.images.firstOrNull()?.let { image ->
+                                viewModel.onEvent(HikeEvent.ImageDeleted(image))
+                            }
+                        },
+                        enabled = !uiState.isCreating
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Create button
+            // Create/Update button
             MHikePrimaryButton(
-                text = "Create Hike",
-                onClick = { viewModel.onEvent(HikeEvent.CreateHike) },
+                text = if (isEditMode) "Update Hike" else "Create Hike",
+                onClick = {
+                    if (isEditMode && hikeId != null) {
+                        viewModel.onEvent(HikeEvent.UpdateHike(hikeId))
+                    } else {
+                        viewModel.onEvent(HikeEvent.CreateHike)
+                    }
+                },
                 enabled = formState.isValid && !uiState.isCreating && !uiState.isUploading,
                 isLoading = uiState.isCreating,
                 modifier = Modifier.fillMaxWidth()

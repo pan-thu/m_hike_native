@@ -100,15 +100,27 @@ class ImageRepositoryImpl @Inject constructor(
                     isComplete = false
                 )
                 trySend(Result.Success(progress))
-            }.addOnSuccessListener {
-                val progress = UploadProgress(
-                    imageId = imageId,
-                    bytesTransferred = it.totalByteCount,
-                    totalBytes = it.totalByteCount,
-                    isComplete = true
-                )
-                trySend(Result.Success(progress))
-                close()
+            }.addOnSuccessListener { taskSnapshot ->
+                // Get download URL after successful upload
+                storageRef.downloadUrl.addOnSuccessListener { downloadUri ->
+                    val progress = UploadProgress(
+                        imageId = imageId,
+                        bytesTransferred = taskSnapshot.totalByteCount,
+                        totalBytes = taskSnapshot.totalByteCount,
+                        isComplete = true,
+                        downloadUrl = downloadUri.toString(),
+                        storagePath = fullPath
+                    )
+                    trySend(Result.Success(progress))
+                    close()
+                }.addOnFailureListener { urlException ->
+                    // Upload succeeded but couldn't get URL
+                    trySend(Result.Error(
+                        urlException as? Exception ?: Exception(urlException.message),
+                        "Upload succeeded but failed to get download URL: ${urlException.message}"
+                    ))
+                    close()
+                }
             }.addOnFailureListener { exception ->
                 val progress = UploadProgress(
                     imageId = imageId,

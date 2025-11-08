@@ -17,6 +17,8 @@ import dev.panthu.mhikeapplication.presentation.auth.signup.SignUpScreen
 import dev.panthu.mhikeapplication.presentation.hike.create.HikeCreationScreen
 import dev.panthu.mhikeapplication.presentation.hike.detail.HikeDetailScreen
 import dev.panthu.mhikeapplication.presentation.hike.list.HikeListScreen
+import dev.panthu.mhikeapplication.presentation.hike.shared.SharedHikeDetailScreen
+import dev.panthu.mhikeapplication.presentation.hike.shared.SharedHikeListScreen
 import dev.panthu.mhikeapplication.presentation.home.HomeScreen
 import dev.panthu.mhikeapplication.presentation.observation.add.AddObservationScreen
 import dev.panthu.mhikeapplication.presentation.observation.detail.ObservationDetailScreen
@@ -87,6 +89,12 @@ fun NavGraph(
                 },
                 onNavigateToHikeList = {
                     navController.navigate(Screen.HikeList.route)
+                },
+                onNavigateToSharedHikes = {
+                    navController.navigate(Screen.SharedHikeList.route)
+                },
+                onNavigateToSignUp = {
+                    navController.navigate(Screen.SignUp.route)
                 }
             )
         }
@@ -98,6 +106,20 @@ fun NavGraph(
                 },
                 onCreateHike = {
                     navController.navigate(Screen.HikeCreate.route)
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(Screen.SharedHikeList.route) {
+            SharedHikeListScreen(
+                onHikeClick = { hikeId ->
+                    navController.navigate(Screen.SharedHikeDetail.createRoute(hikeId))
+                },
+                onNavigateBack = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -116,6 +138,22 @@ fun NavGraph(
             )
         }
 
+        composable(Screen.HikeEdit.route,
+            arguments = listOf(navArgument("hikeId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val hikeId = backStackEntry.arguments?.getString("hikeId") ?: return@composable
+            HikeCreationScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onHikeCreated = { _ ->
+                    navController.popBackStack()
+                },
+                getCurrentLocationUseCase = getCurrentLocationUseCase,
+                hikeId = hikeId // Pass hikeId for edit mode
+            )
+        }
+
         composable(
             route = Screen.HikeDetail.route,
             arguments = listOf(navArgument("hikeId") { type = NavType.StringType })
@@ -126,11 +164,30 @@ fun NavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
+                onEdit = { hikeId ->
+                    navController.navigate(Screen.HikeEdit.createRoute(hikeId))
+                },
                 onShare = { hikeId ->
                     navController.navigate(Screen.ShareHike.createRoute(hikeId))
                 },
                 onNavigateToAddObservation = { hikeId ->
                     navController.navigate(Screen.ObservationAdd.createRoute(hikeId))
+                },
+                onNavigateToObservationDetail = { hikeId, observationId ->
+                    navController.navigate(Screen.ObservationDetail.createRoute(hikeId, observationId))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.SharedHikeDetail.route,
+            arguments = listOf(navArgument("hikeId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val hikeId = backStackEntry.arguments?.getString("hikeId") ?: return@composable
+            SharedHikeDetailScreen(
+                hikeId = hikeId,
+                onNavigateBack = {
+                    navController.popBackStack()
                 },
                 onNavigateToObservationDetail = { hikeId, observationId ->
                     navController.navigate(Screen.ObservationDetail.createRoute(hikeId, observationId))
@@ -153,6 +210,25 @@ fun NavGraph(
         }
 
         composable(
+            route = Screen.ObservationEdit.route,
+            arguments = listOf(
+                navArgument("hikeId") { type = NavType.StringType },
+                navArgument("observationId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val hikeId = backStackEntry.arguments?.getString("hikeId") ?: return@composable
+            val observationId = backStackEntry.arguments?.getString("observationId") ?: return@composable
+            AddObservationScreen(
+                hikeId = hikeId,
+                observationId = observationId,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                getCurrentLocationUseCase = getCurrentLocationUseCase
+            )
+        }
+
+        composable(
             route = Screen.ObservationDetail.route,
             arguments = listOf(
                 navArgument("hikeId") { type = NavType.StringType },
@@ -166,6 +242,9 @@ fun NavGraph(
                 observationId = observationId,
                 onNavigateBack = {
                     navController.popBackStack()
+                },
+                onNavigateToEdit = { hikeId, observationId ->
+                    navController.navigate(Screen.ObservationEdit.createRoute(hikeId, observationId))
                 }
             )
         }

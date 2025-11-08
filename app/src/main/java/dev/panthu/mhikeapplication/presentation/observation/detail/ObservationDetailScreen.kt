@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -40,10 +41,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import dev.panthu.mhikeapplication.presentation.common.components.ImageGrid
+import coil3.compose.AsyncImage
 import dev.panthu.mhikeapplication.presentation.observation.ObservationEvent
 import dev.panthu.mhikeapplication.presentation.observation.ObservationViewModel
 import java.text.SimpleDateFormat
@@ -65,14 +68,25 @@ fun ObservationDetailScreen(
 
     val observation = uiState.currentObservation
 
+    // Track if we've successfully loaded the observation
+    var observationWasLoaded by remember { mutableStateOf(false) }
+
     // Load observation
     LaunchedEffect(hikeId, observationId) {
         viewModel.onEvent(ObservationEvent.LoadObservation(hikeId, observationId))
     }
 
-    // Navigate back after delete
+    // Track when observation is loaded
     LaunchedEffect(uiState.currentObservation) {
-        if (observation == null && !uiState.isLoading) {
+        if (uiState.currentObservation != null) {
+            observationWasLoaded = true
+        }
+    }
+
+    // Navigate back after delete
+    LaunchedEffect(uiState.currentObservation, uiState.isLoading, observationWasLoaded) {
+        // If we previously had an observation loaded, and now it's null, and we're not loading, then it was deleted
+        if (observationWasLoaded && !uiState.isLoading && uiState.currentObservation == null) {
             onNavigateBack()
         }
     }
@@ -262,22 +276,23 @@ fun ObservationDetailScreen(
                         }
                     }
 
-                    // Images if exist
+                    // Image if exists (limited to 1)
                     if (observation.hasImages()) {
                         Text(
-                            text = "Images",
+                            text = "Image",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
 
-                        ImageGrid(
-                            images = observation.imageUrls.mapIndexed { index, url ->
-                                dev.panthu.mhikeapplication.domain.model.ImageMetadata(
-                                    id = "img_$index",
-                                    url = url
-                                )
-                            },
-                            onImageClick = { /* TODO: Full screen viewer */ }
+                        // Display single image
+                        AsyncImage(
+                            model = observation.imageUrls.first(),
+                            contentDescription = "Observation image",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(250.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
                         )
                     }
 

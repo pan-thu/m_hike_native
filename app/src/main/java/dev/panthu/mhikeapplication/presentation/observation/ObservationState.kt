@@ -38,7 +38,7 @@ data class ObservationFormState(
         const val TEXT_MIN_LENGTH = 3
         const val TEXT_MAX_LENGTH = 500
         const val COMMENTS_MAX_LENGTH = 1000
-        const val MAX_IMAGES = 10
+        const val MAX_IMAGES = 1
         const val MAX_IMAGE_SIZE_MB = 5
     }
 
@@ -76,12 +76,12 @@ data class ObservationFormState(
 
     /**
      * Validate images
-     * - Max 10 images
+     * - Max 1 image
      * - Each max 5MB (size validation would need to be done at upload time)
      */
     fun validateImages(): String? {
         return when {
-            images.size > MAX_IMAGES -> "Maximum $MAX_IMAGES images allowed per observation"
+            images.size > MAX_IMAGES -> "Only $MAX_IMAGES image allowed per observation"
             else -> null
         }
     }

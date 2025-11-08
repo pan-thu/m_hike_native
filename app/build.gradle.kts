@@ -79,6 +79,7 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 
     // Location
     implementation(libs.play.services.location)

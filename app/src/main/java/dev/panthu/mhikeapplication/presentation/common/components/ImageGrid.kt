@@ -3,15 +3,13 @@ package dev.panthu.mhikeapplication.presentation.common.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
@@ -62,21 +60,36 @@ fun ImageGrid(
             )
         }
     } else {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
-            modifier = modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        // Use regular Column with Row layout instead of LazyVerticalGrid
+        // This avoids nesting scrollable containers (LazyGrid inside verticalScroll)
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(images, key = { it.id }) { image ->
-                ImageGridItem(
-                    image = image,
-                    onClick = { onImageClick(image) },
-                    onDeleteClick = if (canDelete && onDeleteClick != null) {
-                        { onDeleteClick(image) }
-                    } else null
-                )
+            // Group images into rows of 3
+            images.chunked(3).forEach { rowImages ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    rowImages.forEach { image ->
+                        Box(modifier = Modifier.weight(1f)) {
+                            ImageGridItem(
+                                image = image,
+                                onClick = { onImageClick(image) },
+                                onDeleteClick = if (canDelete && onDeleteClick != null) {
+                                    { onDeleteClick(image) }
+                                } else null
+                            )
+                        }
+                    }
+                    // Fill remaining spaces in incomplete rows
+                    repeat(3 - rowImages.size) {
+                        Box(modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
     }

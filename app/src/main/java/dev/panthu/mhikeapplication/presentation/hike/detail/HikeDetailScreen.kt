@@ -17,9 +17,11 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocalParking
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,11 +31,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -44,7 +50,6 @@ import coil3.compose.AsyncImage
 import dev.panthu.mhikeapplication.domain.model.Difficulty
 import dev.panthu.mhikeapplication.presentation.auth.AuthViewModel
 import dev.panthu.mhikeapplication.presentation.auth.AuthenticationState
-import dev.panthu.mhikeapplication.presentation.common.components.GuestModeBanner
 import dev.panthu.mhikeapplication.presentation.common.components.MHikePrimaryButton
 import dev.panthu.mhikeapplication.presentation.hike.HikeEvent
 import dev.panthu.mhikeapplication.presentation.hike.HikeViewModel
@@ -57,6 +62,7 @@ import java.util.Locale
 fun HikeDetailScreen(
     hikeId: String,
     onNavigateBack: () -> Unit,
+    onEdit: (String) -> Unit = {},
     onShare: (String) -> Unit = {},
     onNavigateToAddObservation: (String) -> Unit = {},
     onNavigateToObservationDetail: (String, String) -> Unit = { _, _ -> },
@@ -70,8 +76,51 @@ fun HikeDetailScreen(
     val isAuthenticated = authState.authState is AuthenticationState.Authenticated
     val isGuest = authState.authState is AuthenticationState.Guest
 
+    // Track if we've successfully loaded the hike
+    var hikeWasLoaded by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(hikeId) {
         viewModel.onEvent(HikeEvent.LoadHike(hikeId))
+    }
+
+    // Track when hike is loaded
+    LaunchedEffect(uiState.currentHike) {
+        if (uiState.currentHike != null) {
+            hikeWasLoaded = true
+        }
+    }
+
+    // Navigate back after successful deletion
+    LaunchedEffect(uiState.currentHike, uiState.isLoading, hikeWasLoaded) {
+        // If we previously had a hike loaded, and now it's null, and we're not loading, then it was deleted
+        if (hikeWasLoaded && !uiState.isLoading && uiState.currentHike == null) {
+            onNavigateBack()
+        }
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Hike") },
+            text = { Text("Are you sure you want to delete this hike? This will also delete all observations. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onEvent(HikeEvent.DeleteHike(hikeId))
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -87,6 +136,13 @@ fun HikeDetailScreen(
                     }
                 },
                 actions = {
+                    // Edit button
+                    IconButton(onClick = { onEdit(hikeId) }) {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = "Edit hike"
+                        )
+                    }
                     // Share button only for authenticated users
                     if (isAuthenticated) {
                         IconButton(onClick = { onShare(hikeId) }) {
@@ -97,7 +153,7 @@ fun HikeDetailScreen(
                         }
                     }
                     IconButton(
-                        onClick = { viewModel.onEvent(HikeEvent.DeleteHike(hikeId)) }
+                        onClick = { showDeleteDialog = true }
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Delete,
@@ -144,14 +200,6 @@ fun HikeDetailScreen(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Guest mode banner
-                        if (isGuest) {
-                            GuestModeBanner(
-                                onSignUp = onNavigateToSignUp,
-                                message = "Sign up to share this hike with friends and back up to cloud"
-                            )
-                        }
-
                         // Title
                         Text(
                             text = hike.name,

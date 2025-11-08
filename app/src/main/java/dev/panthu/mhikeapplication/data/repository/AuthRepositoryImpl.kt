@@ -171,17 +171,17 @@ class AuthRepositoryImpl @Inject constructor(
         val results = mutableListOf<User>()
 
         // Search by email (exact match)
+        // Remove isActive filter from query to avoid composite index requirement
         val emailQuery = usersCollection
             .whereEqualTo("email", query)
-            .whereEqualTo("isActive", true)
             .get()
             .await()
         results.addAll(emailQuery.documents.mapNotNull { it.data?.let { data -> User.fromMap(data) } })
 
         // Search by handle (exact match)
+        // Remove isActive filter from query to avoid composite index requirement
         val handleQuery = usersCollection
             .whereEqualTo("handle", query)
-            .whereEqualTo("isActive", true)
             .get()
             .await()
         results.addAll(handleQuery.documents.mapNotNull { it.data?.let { data -> User.fromMap(data) } })
@@ -190,12 +190,11 @@ class AuthRepositoryImpl @Inject constructor(
         val displayNameQuery = usersCollection
             .whereGreaterThanOrEqualTo("displayName", query)
             .whereLessThan("displayName", query + '\uf8ff')
-            .whereEqualTo("isActive", true)
             .get()
             .await()
         results.addAll(displayNameQuery.documents.mapNotNull { it.data?.let { data -> User.fromMap(data) } })
 
-        // Remove duplicates by uid
-        results.distinctBy { it.uid }
+        // Remove duplicates by uid and filter out inactive users in memory
+        results.distinctBy { it.uid }.filter { it.isActive }
     }
 }

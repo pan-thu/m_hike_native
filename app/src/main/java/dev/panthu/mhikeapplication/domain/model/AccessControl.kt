@@ -1,29 +1,19 @@
 package dev.panthu.mhikeapplication.domain.model
 
 data class AccessControl(
-    val invitedUsers: List<String> = emptyList(),
-    val sharedUsers: List<String> = emptyList()
+    val sharedWith: List<String> = emptyList()
 ) {
     fun toMap(): Map<String, Any> = mapOf(
-        "invitedUsers" to invitedUsers,
-        "sharedUsers" to sharedUsers
+        "sharedWith" to sharedWith
     )
 
     fun hasAccess(userId: String): Boolean {
-        return userId in invitedUsers || userId in sharedUsers
+        return userId in sharedWith
     }
 
-    fun addInvitedUser(userId: String): AccessControl {
-        return if (userId !in invitedUsers) {
-            copy(invitedUsers = invitedUsers + userId)
-        } else {
-            this
-        }
-    }
-
-    fun addSharedUser(userId: String): AccessControl {
-        return if (userId !in sharedUsers) {
-            copy(sharedUsers = sharedUsers + userId)
+    fun addUser(userId: String): AccessControl {
+        return if (userId !in sharedWith) {
+            copy(sharedWith = sharedWith + userId)
         } else {
             this
         }
@@ -31,17 +21,22 @@ data class AccessControl(
 
     fun removeUser(userId: String): AccessControl {
         return copy(
-            invitedUsers = invitedUsers.filter { it != userId },
-            sharedUsers = sharedUsers.filter { it != userId }
+            sharedWith = sharedWith.filter { it != userId }
         )
     }
 
     companion object {
         fun fromMap(data: Map<String, Any>): AccessControl {
-            return AccessControl(
-                invitedUsers = (data["invitedUsers"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
-                sharedUsers = (data["sharedUsers"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
-            )
+            // Support both old format (invitedUsers/sharedUsers) and new format (sharedWith)
+            val sharedWith = (data["sharedWith"] as? List<*>)?.mapNotNull { it as? String }
+                ?: run {
+                    // Migrate old data by combining both lists
+                    val invited = (data["invitedUsers"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+                    val shared = (data["sharedUsers"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+                    (invited + shared).distinct()
+                }
+
+            return AccessControl(sharedWith = sharedWith)
         }
     }
 }

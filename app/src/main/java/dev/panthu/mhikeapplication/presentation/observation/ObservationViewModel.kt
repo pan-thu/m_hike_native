@@ -24,7 +24,9 @@ import javax.inject.Inject
 class ObservationViewModel @Inject constructor(
     private val repositoryProvider: dev.panthu.mhikeapplication.domain.provider.RepositoryProvider,
     private val uploadImageUseCase: UploadImageUseCase,
-    private val deleteImageUseCase: DeleteImageUseCase
+    private val deleteImageUseCase: DeleteImageUseCase,
+    private val localImageRepository: dev.panthu.mhikeapplication.data.local.repository.LocalImageRepository,
+    private val authRepository: dev.panthu.mhikeapplication.domain.repository.AuthRepository
 ) : ViewModel() {
 
     // Get repository based on current auth state - synchronous version
@@ -39,6 +41,17 @@ class ObservationViewModel @Inject constructor(
     val formState: StateFlow<ObservationFormState> = _formState.asStateFlow()
 
     private var uploadJob: Job? = null
+
+    // Track current user ID for authentication state
+    private var currentUserId: String? = null
+
+    init {
+        viewModelScope.launch {
+            authRepository.currentUser.collect { user ->
+                currentUserId = user?.uid
+            }
+        }
+    }
 
     override fun onCleared() {
         super.onCleared()
@@ -99,31 +112,41 @@ class ObservationViewModel @Inject constructor(
     }
 
     private fun uploadImage(uri: Uri) {
-        // For now, we'll handle image upload after observation creation
-        // In production, you'd upload to temp storage first
         uploadJob?.cancel()
-
-        val tempObservationId = "temp_${System.currentTimeMillis()}"
-        val tempHikeId = "temp"
 
         uploadJob = viewModelScope.launch {
             _uiState.update { it.copy(isUploading = true, uploadError = null, uploadProgress = 0f) }
 
-            uploadImageUseCase(uri, tempHikeId, tempObservationId).collectLatest { result ->
-                when (result) {
+            // Check if user is authenticated (guest mode vs authenticated mode)
+            val isGuest = currentUserId == null
+
+            if (isGuest) {
+                // Guest mode: Save image locally
+                val tempObservationId = "temp_${System.currentTimeMillis()}"
+                when (val result = localImageRepository.saveImage(uri, "observations/$tempObservationId")) {
                     is Result.Success -> {
-                        val progress = result.data
-                        if (progress.isComplete) {
-                            _uiState.update {
-                                it.copy(
-                                    isUploading = false,
-                                    uploadProgress = null
-                                )
-                            }
-                        } else {
-                            _uiState.update {
-                                it.copy(uploadProgress = progress.progress)
-                            }
+                        val localPath = result.data
+                        val imageMetadata = dev.panthu.mhikeapplication.domain.model.ImageMetadata(
+                            id = java.util.UUID.randomUUID().toString(),
+                            url = localPath,
+                            thumbnailUrl = localPath,
+                            storagePath = localPath,
+                            contentType = "image/jpeg",
+                            size = java.io.File(localPath).length(),
+                            uploadedAt = com.google.firebase.Timestamp.now(),
+                            uploadedBy = "guest"
+                        )
+
+                        // Add to form state
+                        _formState.update { state ->
+                            state.copy(images = state.images + imageMetadata)
+                        }
+
+                        _uiState.update {
+                            it.copy(
+                                isUploading = false,
+                                uploadProgress = null
+                            )
                         }
                     }
                     is Result.Error -> {
@@ -131,12 +154,64 @@ class ObservationViewModel @Inject constructor(
                             it.copy(
                                 isUploading = false,
                                 uploadProgress = null,
-                                uploadError = result.message ?: "Upload failed"
+                                uploadError = result.message ?: "Failed to save image"
                             )
                         }
                     }
                     is Result.Loading -> {
                         _uiState.update { it.copy(isUploading = true) }
+                    }
+                }
+            } else {
+                // Authenticated mode: Upload to Firebase
+                val tempObservationId = "temp_${System.currentTimeMillis()}"
+                val tempHikeId = "temp"
+
+                uploadImageUseCase(uri, tempHikeId, tempObservationId).collectLatest { result ->
+                    when (result) {
+                        is Result.Success -> {
+                            val progress = result.data
+                            if (progress.isComplete) {
+                                // Upload complete - create ImageMetadata and add to form state
+                                val imageMetadata = dev.panthu.mhikeapplication.domain.model.ImageMetadata(
+                                    id = progress.imageId,
+                                    url = progress.downloadUrl,
+                                    thumbnailUrl = progress.downloadUrl,
+                                    storagePath = progress.storagePath,
+                                    contentType = "image/jpeg",
+                                    size = progress.totalBytes,
+                                    uploadedAt = com.google.firebase.Timestamp.now(),
+                                    uploadedBy = currentUserId ?: ""
+                                )
+
+                                _formState.update { state ->
+                                    state.copy(images = state.images + imageMetadata)
+                                }
+
+                                _uiState.update {
+                                    it.copy(
+                                        isUploading = false,
+                                        uploadProgress = null
+                                    )
+                                }
+                            } else {
+                                _uiState.update {
+                                    it.copy(uploadProgress = progress.progress)
+                                }
+                            }
+                        }
+                        is Result.Error -> {
+                            _uiState.update {
+                                it.copy(
+                                    isUploading = false,
+                                    uploadProgress = null,
+                                    uploadError = result.message ?: "Upload failed"
+                                )
+                            }
+                        }
+                        is Result.Loading -> {
+                            _uiState.update { it.copy(isUploading = true) }
+                        }
                     }
                 }
             }
@@ -145,18 +220,30 @@ class ObservationViewModel @Inject constructor(
 
     private fun deleteImage(image: dev.panthu.mhikeapplication.domain.model.ImageMetadata) {
         viewModelScope.launch {
-            when (val result = deleteImageUseCase(image.storagePath)) {
-                is Result.Success -> {
-                    _formState.update { state ->
-                        state.copy(images = state.images.filter { it.id != image.id })
-                    }
+            // Check if user is in guest mode
+            val isGuest = currentUserId == null
+
+            if (isGuest) {
+                // Guest mode: Just remove from form state without deleting file
+                // The file will be cleaned up when the observation is updated/deleted
+                _formState.update { state ->
+                    state.copy(images = state.images.filter { it.id != image.id })
                 }
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(error = result.message ?: "Failed to delete image")
+            } else {
+                // Authenticated mode: Delete from Firebase Storage
+                when (val result = deleteImageUseCase(image.storagePath)) {
+                    is Result.Success -> {
+                        _formState.update { state ->
+                            state.copy(images = state.images.filter { it.id != image.id })
+                        }
                     }
+                    is Result.Error -> {
+                        _uiState.update {
+                            it.copy(error = result.message ?: "Failed to delete image")
+                        }
+                    }
+                    is Result.Loading -> { /* No action */ }
                 }
-                is Result.Loading -> { /* No action */ }
             }
         }
     }
@@ -183,7 +270,7 @@ class ObservationViewModel @Inject constructor(
             _uiState.update { it.copy(isCreating = true, error = null) }
 
             val observation = Observation(
-                id = "", // Firestore will generate
+                id = java.util.UUID.randomUUID().toString(),
                 hikeId = hikeId,
                 text = form.text,
                 timestamp = Timestamp(Date(form.timestamp)),
@@ -227,11 +314,41 @@ class ObservationViewModel @Inject constructor(
             repository.getObservation(hikeId, observationId).collect { result ->
                 when (result) {
                     is Result.Success<*> -> {
+                        val observation = result.data as? dev.panthu.mhikeapplication.domain.model.Observation
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
-                                currentObservation = result.data as? dev.panthu.mhikeapplication.domain.model.Observation
+                                currentObservation = observation
                             )
+                        }
+
+                        // Populate form state for editing
+                        observation?.let { loadedObservation ->
+                            _formState.update {
+                                ObservationFormState(
+                                    text = loadedObservation.text,
+                                    location = if (loadedObservation.location != null) {
+                                        dev.panthu.mhikeapplication.domain.model.Location(
+                                            name = "",
+                                            coordinates = loadedObservation.location
+                                        )
+                                    } else null,
+                                    comments = loadedObservation.comments ?: "",
+                                    images = loadedObservation.imageUrls.map { url ->
+                                        dev.panthu.mhikeapplication.domain.model.ImageMetadata(
+                                            id = "",
+                                            url = url,
+                                            thumbnailUrl = url,
+                                            storagePath = url,
+                                            contentType = "image/jpeg",
+                                            size = 0,
+                                            uploadedAt = loadedObservation.createdAt,
+                                            uploadedBy = ""
+                                        )
+                                    },
+                                    timestamp = loadedObservation.timestamp.toDate().time
+                                )
+                            }
                         }
                     }
                     is Result.Error -> {
@@ -313,6 +430,8 @@ class ObservationViewModel @Inject constructor(
                             currentObservation = result.data
                         )
                     }
+                    // Reset form after successful update
+                    _formState.value = ObservationFormState()
                 }
                 is Result.Error -> {
                     _uiState.update {

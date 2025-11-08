@@ -44,6 +44,8 @@ data class UploadProgress(
     val bytesTransferred: Long,
     val totalBytes: Long,
     val isComplete: Boolean = false,
+    val downloadUrl: String = "",
+    val storagePath: String = "",
     val error: Exception? = null
 ) {
     val progress: Float

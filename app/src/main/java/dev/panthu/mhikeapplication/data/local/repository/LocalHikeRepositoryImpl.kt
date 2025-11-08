@@ -64,9 +64,15 @@ class LocalHikeRepositoryImpl @Inject constructor(
 
     override suspend fun createHike(hike: Hike): Result<Hike> {
         return try {
-            val entity = hike.toEntity()
+            // Generate UUID if ID is empty
+            val hikeWithId = if (hike.id.isEmpty()) {
+                hike.copy(id = java.util.UUID.randomUUID().toString())
+            } else {
+                hike
+            }
+            val entity = hikeWithId.toEntity()
             hikeDao.insert(entity)
-            Result.Success(hike)
+            Result.Success(hikeWithId)
         } catch (e: Exception) {
             Result.Error(e.message ?: "Failed to create hike")
         }
@@ -152,10 +158,6 @@ class LocalHikeRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Result.Error(e.message ?: "Failed to delete hike")
         }
-    }
-
-    override suspend fun addInvitedUsers(hikeId: String, userIds: List<String>): Result<Unit> {
-        return Result.Error("Sign up to invite users to your hikes")
     }
 
     override suspend fun shareHike(hikeId: String, userId: String): Result<Unit> {

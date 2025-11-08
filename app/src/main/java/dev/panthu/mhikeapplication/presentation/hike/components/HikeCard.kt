@@ -60,7 +60,7 @@ fun HikeCard(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Hero image
+            // Hero image (only show if available)
             if (hike.imageUrls.isNotEmpty()) {
                 AsyncImage(
                     model = hike.imageUrls.first(),
@@ -70,13 +70,6 @@ fun HikeCard(
                         .height(160.dp)
                         .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
                     contentScale = ContentScale.Crop
-                )
-            } else {
-                // Placeholder when no image
-                Spacer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp)
                 )
             }
 

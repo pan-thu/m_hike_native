@@ -18,6 +18,7 @@ fun MHikeTextField(
     modifier: Modifier = Modifier,
     placeholder: String = "",
     enabled: Boolean = true,
+    readOnly: Boolean = false,
     isError: Boolean = false,
     errorMessage: String? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
@@ -37,6 +38,7 @@ fun MHikeTextField(
         } else null,
         modifier = modifier,
         enabled = enabled,
+        readOnly = readOnly,
         isError = isError,
         supportingText = if (isError && errorMessage != null) {
             { Text(errorMessage, color = MaterialTheme.colorScheme.error) }

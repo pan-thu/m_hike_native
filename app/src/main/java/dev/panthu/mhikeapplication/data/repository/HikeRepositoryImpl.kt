@@ -72,10 +72,13 @@ class HikeRepositoryImpl @Inject constructor(
     override fun getMyHikes(userId: String): Flow<Result<List<Hike>>> = callbackFlow {
         trySend(Result.Loading)
 
+        android.util.Log.d("HikeRepository", "getMyHikes called with userId: $userId")
+
         val listener = hikesCollection
             .whereEqualTo("ownerId", userId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
+                    android.util.Log.e("HikeRepository", "Error loading my hikes: ${error.message}")
                     trySend(Result.Error(Exception(error)))
                     return@addSnapshotListener
                 }
@@ -84,6 +87,7 @@ class HikeRepositoryImpl @Inject constructor(
                     val hikes = snapshot.documents.mapNotNull { doc ->
                         doc.data?.let { Hike.fromMap(it) }
                     }
+                    android.util.Log.d("HikeRepository", "getMyHikes returned ${hikes.size} hikes")
                     trySend(Result.Success(hikes))
                 }
             }
@@ -94,6 +98,10 @@ class HikeRepositoryImpl @Inject constructor(
     override fun getSharedHikes(userId: String): Flow<Result<List<Hike>>> = callbackFlow {
         trySend(Result.Loading)
 
+        android.util.Log.d("HikeRepository", "getSharedHikes called with userId: $userId")
+
+        // For now, load all hikes and filter in memory to support both old and new formats
+        // This ensures we catch hikes with either structure
         val listener = hikesCollection
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -102,12 +110,43 @@ class HikeRepositoryImpl @Inject constructor(
                 }
 
                 if (snapshot != null) {
-                    val hikes = snapshot.documents.mapNotNull { doc ->
-                        doc.data?.let { Hike.fromMap(it) }
-                    }.filter { hike ->
-                        hike.accessControl.hasAccess(userId) && !hike.isOwner(userId)
+                    val sharedHikes = mutableListOf<Hike>()
+
+                    android.util.Log.d("HikeRepository", "Total hikes in Firestore: ${snapshot.documents.size}")
+
+                    snapshot.documents.forEach { doc ->
+                        val data = doc.data ?: return@forEach
+                        val hike = Hike.fromMap(data)
+
+                        android.util.Log.d("HikeRepository", "Checking hike ${hike.id}, owner: ${hike.ownerId}, sharedWith: ${hike.accessControl.sharedWith}")
+
+                        // Skip if user owns this hike
+                        if (hike.isOwner(userId)) {
+                            android.util.Log.d("HikeRepository", "Skipping ${hike.id} - user is owner")
+                            return@forEach
+                        }
+
+                        // Check new format
+                        if (hike.accessControl.sharedWith.contains(userId)) {
+                            android.util.Log.d("HikeRepository", "Found shared hike (new format): ${hike.id}")
+                            sharedHikes.add(hike)
+                            return@forEach
+                        }
+
+                        // Check old format (in case Firestore still has old structure)
+                        val accessData = data["accessControl"] as? Map<String, Any>
+                        if (accessData != null) {
+                            val invitedUsers = (accessData["invitedUsers"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+                            val sharedUsers = (accessData["sharedUsers"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+                            if (userId in invitedUsers || userId in sharedUsers) {
+                                android.util.Log.d("HikeRepository", "Found shared hike (old format): ${hike.id}")
+                                sharedHikes.add(hike)
+                            }
+                        }
                     }
-                    trySend(Result.Success(hikes))
+
+                    android.util.Log.d("HikeRepository", "Returning ${sharedHikes.size} shared hikes")
+                    trySend(Result.Success(sharedHikes))
                 }
             }
 
@@ -211,25 +250,6 @@ class HikeRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun addInvitedUsers(hikeId: String, userIds: List<String>): Result<Unit> = safeCall {
-        val hikeDoc = hikesCollection.document(hikeId).get().await()
-        if (!hikeDoc.exists()) {
-            throw Exception("Hike not found")
-        }
-
-        val hike = hikeDoc.data?.let { Hike.fromMap(it) } ?: throw Exception("Invalid hike data")
-        val updatedAccessControl = userIds.fold(hike.accessControl) { acc, userId ->
-            acc.addInvitedUser(userId)
-        }
-
-        hikesCollection.document(hikeId).update(
-            mapOf(
-                "accessControl" to updatedAccessControl.toMap(),
-                "updatedAt" to Timestamp.now()
-            )
-        ).await()
-    }
-
     override suspend fun shareHike(hikeId: String, userId: String): Result<Unit> = safeCall {
         val hikeDoc = hikesCollection.document(hikeId).get().await()
         if (!hikeDoc.exists()) {
@@ -237,7 +257,7 @@ class HikeRepositoryImpl @Inject constructor(
         }
 
         val hike = hikeDoc.data?.let { Hike.fromMap(it) } ?: throw Exception("Invalid hike data")
-        val updatedAccessControl = hike.accessControl.addSharedUser(userId)
+        val updatedAccessControl = hike.accessControl.addUser(userId)
 
         hikesCollection.document(hikeId).update(
             mapOf(

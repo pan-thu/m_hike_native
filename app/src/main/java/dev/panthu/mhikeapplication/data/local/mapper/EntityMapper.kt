@@ -57,8 +57,7 @@ fun HikeEntity.toDomain(): Hike {
             emptyList()
         },
         accessControl = AccessControl(
-            invitedUsers = emptyList(), // Local storage doesn't have social features
-            sharedUsers = emptyList()
+            sharedWith = emptyList() // Local storage doesn't have social features
         ),
         createdAt = Timestamp(Date(createdAt)),
         updatedAt = Timestamp(Date(updatedAt))

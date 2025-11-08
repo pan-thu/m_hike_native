@@ -102,7 +102,7 @@ fun LocationPicker(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Location",
+                    text = "Location *",
                     style = MaterialTheme.typography.titleMedium
                 )
 
@@ -163,12 +163,15 @@ fun LocationPicker(
                     value = String.format("%.6f", location.coordinates.latitude),
                     onValueChange = { lat ->
                         lat.toDoubleOrNull()?.let { latitude ->
-                            onLocationChange(
-                                location.copy(
-                                    coordinates = GeoPoint(latitude, location.coordinates.longitude),
-                                    manualOverride = true
+                            // Validate latitude is in range [-90, 90]
+                            if (latitude in -90.0..90.0) {
+                                onLocationChange(
+                                    location.copy(
+                                        coordinates = GeoPoint(latitude, location.coordinates.longitude),
+                                        manualOverride = true
+                                    )
                                 )
-                            )
+                            }
                         }
                     },
                     label = "Latitude",
@@ -183,12 +186,15 @@ fun LocationPicker(
                     value = String.format("%.6f", location.coordinates.longitude),
                     onValueChange = { lon ->
                         lon.toDoubleOrNull()?.let { longitude ->
-                            onLocationChange(
-                                location.copy(
-                                    coordinates = GeoPoint(location.coordinates.latitude, longitude),
-                                    manualOverride = true
+                            // Validate longitude is in range [-180, 180]
+                            if (longitude in -180.0..180.0) {
+                                onLocationChange(
+                                    location.copy(
+                                        coordinates = GeoPoint(location.coordinates.latitude, longitude),
+                                        manualOverride = true
+                                    )
                                 )
-                            )
+                            }
                         }
                     },
                     label = "Longitude",
