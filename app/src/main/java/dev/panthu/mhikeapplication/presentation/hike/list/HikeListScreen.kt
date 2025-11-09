@@ -19,11 +19,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -33,17 +38,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.panthu.mhikeapplication.domain.model.Difficulty
+import dev.panthu.mhikeapplication.presentation.auth.AuthViewModel
+import dev.panthu.mhikeapplication.presentation.auth.AuthenticationState
 import dev.panthu.mhikeapplication.presentation.hike.HikeEvent
 import dev.panthu.mhikeapplication.presentation.hike.HikeViewModel
 import dev.panthu.mhikeapplication.presentation.hike.components.HikeCard
@@ -54,12 +66,44 @@ fun HikeListScreen(
     onHikeClick: (String) -> Unit,
     onCreateHike: () -> Unit,
     onNavigateBack: () -> Unit = {},
-    viewModel: HikeViewModel = hiltViewModel()
+    viewModel: HikeViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val authState by authViewModel.uiState.collectAsStateWithLifecycle()
+
+    val isGuest = authState.authState is AuthenticationState.Guest
+    var showMenu by remember { mutableStateOf(false) }
+    var showResetDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.onEvent(HikeEvent.LoadMyHikes)
+    }
+
+    // Reset confirmation dialog
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("Reset All Data?") },
+            text = {
+                Text("This will permanently delete all your hikes and reset your guest account. This cannot be undone.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.onEvent(HikeEvent.ResetDatabase)
+                        showResetDialog = false
+                    }
+                ) {
+                    Text("Reset", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -72,6 +116,37 @@ fun HikeListScreen(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Navigate back"
                         )
+                    }
+                },
+                actions = {
+                    if (isGuest) {
+                        Box {
+                            IconButton(onClick = { showMenu = !showMenu }) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "More options"
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Reset Database") },
+                                    onClick = {
+                                        showMenu = false
+                                        showResetDialog = true
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.DeleteForever,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             )

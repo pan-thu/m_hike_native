@@ -77,14 +77,5 @@ fun OnboardingScreen(
                 color = MaterialTheme.colorScheme.primary
             )
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Your guest data will be saved when you sign up later",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
     }
 }

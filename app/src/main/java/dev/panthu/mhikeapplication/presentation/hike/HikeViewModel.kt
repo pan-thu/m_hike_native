@@ -15,6 +15,7 @@ import dev.panthu.mhikeapplication.domain.usecase.DeleteImageUseCase
 import dev.panthu.mhikeapplication.domain.usecase.SearchUsersUseCase
 import dev.panthu.mhikeapplication.domain.usecase.UploadImageUseCase
 import dev.panthu.mhikeapplication.util.Result
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Date
 import javax.inject.Inject
 
@@ -32,7 +34,9 @@ class HikeViewModel @Inject constructor(
     private val uploadImageUseCase: UploadImageUseCase,
     private val deleteImageUseCase: DeleteImageUseCase,
     private val searchUsersUseCase: SearchUsersUseCase,
-    private val localImageRepository: dev.panthu.mhikeapplication.data.local.repository.LocalImageRepository
+    private val localImageRepository: dev.panthu.mhikeapplication.data.local.repository.LocalImageRepository,
+    private val database: dev.panthu.mhikeapplication.data.local.MHikeDatabase,
+    private val guestIdManager: dev.panthu.mhikeapplication.util.GuestIdManager
 ) : ViewModel() {
 
     // Get repository based on current auth state - synchronous version
@@ -75,6 +79,7 @@ class HikeViewModel @Inject constructor(
             is HikeEvent.DifficultyChanged -> updateDifficulty(event.difficulty)
             is HikeEvent.ParkingChanged -> updateParking(event.hasParking)
             is HikeEvent.DescriptionChanged -> updateDescription(event.description)
+            is HikeEvent.GroupSizeChanged -> updateGroupSize(event.groupSize)
 
             // Image events
             is HikeEvent.ImageSelected -> uploadImage(event.uri)
@@ -107,6 +112,9 @@ class HikeViewModel @Inject constructor(
             // Navigation events
             is HikeEvent.NavigateBack -> { /* Handled by screen */ }
             is HikeEvent.ClearError -> clearError()
+
+            // Database management events
+            is HikeEvent.ResetDatabase -> resetDatabase()
         }
     }
 
@@ -172,6 +180,22 @@ class HikeViewModel @Inject constructor(
 
     private fun updateDescription(description: String) {
         _formState.update { it.copy(description = description) }
+    }
+
+    private fun updateGroupSize(groupSize: String) {
+        _formState.update { state ->
+            val groupSizeValue = groupSize.toIntOrNull() ?: 0
+            state.copy(
+                groupSize = groupSizeValue,
+                groupSizeError = when {
+                    groupSize.isBlank() -> "Group size is required"
+                    groupSize.toIntOrNull() == null -> "Group size must be a valid number"
+                    groupSizeValue < HikeFormState.GROUP_SIZE_MIN -> "Group size must be at least ${HikeFormState.GROUP_SIZE_MIN}"
+                    groupSizeValue > HikeFormState.GROUP_SIZE_MAX -> "Group size must be less than ${HikeFormState.GROUP_SIZE_MAX}"
+                    else -> null
+                }
+            )
+        }
     }
 
     private fun uploadImage(uri: Uri) {
@@ -387,6 +411,7 @@ class HikeViewModel @Inject constructor(
                 difficulty = form.difficulty,
                 hasParking = form.hasParking,
                 description = form.description,
+                groupSize = form.groupSize,
                 imageUrls = form.images.map { it.url },
                 createdAt = Timestamp.now(),
                 updatedAt = Timestamp.now()
@@ -449,6 +474,7 @@ class HikeViewModel @Inject constructor(
                                     difficulty = loadedHike.difficulty,
                                     hasParking = loadedHike.hasParking,
                                     description = loadedHike.description,
+                                    groupSize = loadedHike.groupSize,
                                     images = loadedHike.imageUrls.map { url ->
                                         ImageMetadata(
                                             id = "",
@@ -516,6 +542,7 @@ class HikeViewModel @Inject constructor(
                 difficulty = form.difficulty,
                 hasParking = form.hasParking,
                 description = form.description,
+                groupSize = form.groupSize,
                 imageUrls = form.images.map { it.url },
                 updatedAt = Timestamp.now()
             )
@@ -833,6 +860,39 @@ class HikeViewModel @Inject constructor(
 
     private fun clearError() {
         _uiState.update { it.copy(error = null, uploadError = null) }
+    }
+
+    private fun resetDatabase() {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isLoading = true, error = null) }
+
+                // Perform database operations on IO thread
+                withContext(Dispatchers.IO) {
+                    // Clear all database tables
+                    database.clearAllTables()
+
+                    // Reset guest ID and all SharedPreferences
+                    guestIdManager.resetAll()
+                }
+
+                // Clear in-memory state (back on main thread)
+                _uiState.update {
+                    HikeUiState(isLoading = false)
+                }
+                _formState.value = HikeFormState()
+
+                android.util.Log.d("HikeViewModel", "Database and guest data reset successfully")
+            } catch (e: Exception) {
+                android.util.Log.e("HikeViewModel", "Failed to reset database", e)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Failed to reset database: ${e.message}"
+                    )
+                }
+            }
+        }
     }
 
     fun resetForm() {

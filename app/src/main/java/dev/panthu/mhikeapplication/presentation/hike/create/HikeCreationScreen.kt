@@ -250,6 +250,19 @@ fun HikeCreationScreen(
                 }
             }
 
+            // Group Size field
+            MHikeTextField(
+                value = if (formState.groupSize > 0) formState.groupSize.toString() else "",
+                onValueChange = { viewModel.onEvent(HikeEvent.GroupSizeChanged(it)) },
+                label = "Group Size *",
+                placeholder = "e.g., 5",
+                isError = formState.groupSizeError != null,
+                errorMessage = formState.groupSizeError,
+                enabled = !uiState.isCreating,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+
             // Parking switch
             Row(
                 modifier = Modifier.fillMaxWidth(),

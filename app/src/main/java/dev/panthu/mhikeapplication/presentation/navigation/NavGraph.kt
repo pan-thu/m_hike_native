@@ -83,7 +83,7 @@ fun NavGraph(
         composable(Screen.Home.route) {
             HomeScreen(
                 onLogout = {
-                    navController.navigate(Screen.Login.route) {
+                    navController.navigate(Screen.Onboarding.route) {
                         popUpTo(Screen.Home.route) { inclusive = true }
                     }
                 },

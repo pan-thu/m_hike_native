@@ -184,6 +184,7 @@ sealed class HikeEvent {
     data class DifficultyChanged(val difficulty: Difficulty) : HikeEvent()
     data class ParkingChanged(val hasParking: Boolean) : HikeEvent()
     data class DescriptionChanged(val description: String) : HikeEvent()
+    data class GroupSizeChanged(val groupSize: String) : HikeEvent()
 
     // Image events
     data class ImageSelected(val uri: android.net.Uri) : HikeEvent()
@@ -216,4 +217,7 @@ sealed class HikeEvent {
     // Navigation events
     data object NavigateBack : HikeEvent()
     data object ClearError : HikeEvent()
+
+    // Database management events
+    data object ResetDatabase : HikeEvent()
 }
