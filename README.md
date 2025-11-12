@@ -160,11 +160,6 @@ The upgrade process is seamless and takes just a few seconds!
 - Your password is never stored in plain text
 - Email is only used for authentication
 
-## Support
-
-For questions, issues, or feature requests:
-- Check the [Product Requirements Document](docs/prd.md) for detailed feature information and user flows
-- Review the [Codebase Analysis](docs/CODEBASE_ANALYSIS.md) for technical architecture and implementation details
 
 ## Technology
 
@@ -188,16 +183,3 @@ M-Hike is built with modern Android development tools and a hybrid architecture:
 - Offline-first architecture with cloud sync
 - Real-time synchronization for shared hikes
 - Strategic retry logic for network resilience
-
-For detailed architecture documentation, see [CODEBASE_ANALYSIS.md](docs/CODEBASE_ANALYSIS.md)
-
-## Version
-
-**Current Version**: 2.0.0
-**Architecture**: Hybrid (Guest Mode + Cloud)
-**Release Date**: 2025-10-30
-**Status**: Production Ready with Guest Mode Support
-
-## Acknowledgments
-
-Built with modern Android development best practices and powered by Firebase cloud services.
