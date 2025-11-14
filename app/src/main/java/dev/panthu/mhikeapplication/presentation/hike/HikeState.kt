@@ -25,6 +25,9 @@ data class HikeUiState(
     val filterMinLength: Double? = null,
     val filterMaxLength: Double? = null,
     val filterHasParking: Boolean? = null,
+    val filterLocation: String? = null,
+    val filterStartDate: Long? = null,
+    val filterEndDate: Long? = null,
     val searchResults: List<User> = emptyList(),
     val isSearchingUsers: Boolean = false
 )
@@ -208,6 +211,14 @@ sealed class HikeEvent {
     data class FilterByDifficulty(val difficulty: Difficulty?) : HikeEvent()
     data class FilterByLength(val min: Double?, val max: Double?) : HikeEvent()
     data class FilterByParking(val hasParking: Boolean?) : HikeEvent()
+    data class AdvancedSearch(
+        val name: String?,
+        val location: String?,
+        val minLength: Double?,
+        val maxLength: Double?,
+        val startDate: Long?,
+        val endDate: Long?
+    ) : HikeEvent()
     data object ClearFilters : HikeEvent()
 
     // Sharing events

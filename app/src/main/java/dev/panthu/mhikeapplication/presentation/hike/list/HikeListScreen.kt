@@ -58,6 +58,8 @@ import dev.panthu.mhikeapplication.presentation.auth.AuthViewModel
 import dev.panthu.mhikeapplication.presentation.auth.AuthenticationState
 import dev.panthu.mhikeapplication.presentation.hike.HikeEvent
 import dev.panthu.mhikeapplication.presentation.hike.HikeViewModel
+import dev.panthu.mhikeapplication.presentation.hike.components.AdvancedSearchCriteria
+import dev.panthu.mhikeapplication.presentation.hike.components.AdvancedSearchDialog
 import dev.panthu.mhikeapplication.presentation.hike.components.HikeCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,6 +77,7 @@ fun HikeListScreen(
     val isGuest = authState.authState is AuthenticationState.Guest
     var showMenu by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
+    var showAdvancedSearch by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.onEvent(HikeEvent.LoadMyHikes)
@@ -102,6 +105,36 @@ fun HikeListScreen(
                 TextButton(onClick = { showResetDialog = false }) {
                     Text("Cancel")
                 }
+            }
+        )
+    }
+
+    // Advanced search dialog
+    if (showAdvancedSearch) {
+        AdvancedSearchDialog(
+            initialCriteria = AdvancedSearchCriteria(
+                name = uiState.searchQuery,
+                location = uiState.filterLocation ?: "",
+                minLength = uiState.filterMinLength?.toString() ?: "",
+                maxLength = uiState.filterMaxLength?.toString() ?: "",
+                startDate = uiState.filterStartDate,
+                endDate = uiState.filterEndDate
+            ),
+            onDismiss = { showAdvancedSearch = false },
+            onSearch = { criteria ->
+                viewModel.onEvent(
+                    HikeEvent.AdvancedSearch(
+                        name = criteria.name.ifBlank { null },
+                        location = criteria.location.ifBlank { null },
+                        minLength = criteria.minLength.toDoubleOrNull(),
+                        maxLength = criteria.maxLength.toDoubleOrNull(),
+                        startDate = criteria.startDate,
+                        endDate = criteria.endDate
+                    )
+                )
+            },
+            onClear = {
+                viewModel.onEvent(HikeEvent.ClearFilters)
             }
         )
     }
@@ -208,26 +241,49 @@ fun HikeListScreen(
                     Column(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        // Search bar
-                        OutlinedTextField(
-                            value = uiState.searchQuery,
-                            onValueChange = { viewModel.onEvent(HikeEvent.SearchHikes(it)) },
+                        // Search bar with advanced search button
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
-                            placeholder = { Text("Search hikes...") },
-                            leadingIcon = {
-                                Icon(Icons.Default.Search, contentDescription = "Search")
-                            },
-                            trailingIcon = {
-                                if (uiState.searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { viewModel.onEvent(HikeEvent.SearchHikes("")) }) {
-                                        Icon(Icons.Default.Close, contentDescription = "Clear")
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = uiState.searchQuery,
+                                onValueChange = { viewModel.onEvent(HikeEvent.SearchHikes(it)) },
+                                modifier = Modifier.weight(1f),
+                                placeholder = { Text("Search hikes...") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Search, contentDescription = "Search")
+                                },
+                                trailingIcon = {
+                                    if (uiState.searchQuery.isNotEmpty()) {
+                                        IconButton(onClick = { viewModel.onEvent(HikeEvent.SearchHikes("")) }) {
+                                            Icon(Icons.Default.Close, contentDescription = "Clear")
+                                        }
                                     }
-                                }
-                            },
-                            singleLine = true
-                        )
+                                },
+                                singleLine = true
+                            )
+
+                            // Advanced search button
+                            IconButton(
+                                onClick = { showAdvancedSearch = true },
+                                modifier = Modifier.padding(top = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FilterList,
+                                    contentDescription = "Advanced Search",
+                                    tint = if (uiState.filterLocation != null ||
+                                               uiState.filterStartDate != null ||
+                                               uiState.filterEndDate != null ||
+                                               uiState.filterMinLength != null ||
+                                               uiState.filterMaxLength != null)
+                                        MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
 
                         // Filter chips
                         LazyRow(
@@ -236,11 +292,17 @@ fun HikeListScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             // Clear filters chip (only show if filters are active)
-                            if (uiState.filterDifficulty != null || uiState.filterHasParking != null) {
+                            if (uiState.filterDifficulty != null ||
+                                uiState.filterHasParking != null ||
+                                uiState.filterLocation != null ||
+                                uiState.filterStartDate != null ||
+                                uiState.filterEndDate != null ||
+                                uiState.filterMinLength != null ||
+                                uiState.filterMaxLength != null) {
                                 item {
                                     AssistChip(
                                         onClick = { viewModel.onEvent(HikeEvent.ClearFilters) },
-                                        label = { Text("Clear Filters") },
+                                        label = { Text("Clear All") },
                                         leadingIcon = {
                                             Icon(
                                                 Icons.Default.Close,

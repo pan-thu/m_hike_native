@@ -103,6 +103,14 @@ class HikeViewModel @Inject constructor(
             is HikeEvent.FilterByDifficulty -> filterByDifficulty(event.difficulty)
             is HikeEvent.FilterByLength -> filterByLength(event.min, event.max)
             is HikeEvent.FilterByParking -> filterByParking(event.hasParking)
+            is HikeEvent.AdvancedSearch -> applyAdvancedSearch(
+                event.name,
+                event.location,
+                event.minLength,
+                event.maxLength,
+                event.startDate,
+                event.endDate
+            )
             is HikeEvent.ClearFilters -> clearFilters()
 
             // Sharing events
@@ -628,7 +636,17 @@ class HikeViewModel @Inject constructor(
                             it.copy(
                                 isLoading = false,
                                 allHikes = result.data,
-                                hikes = applyFilters(result.data, it.searchQuery, it.filterDifficulty, it.filterMinLength, it.filterMaxLength, it.filterHasParking)
+                                hikes = applyFilters(
+                                    result.data,
+                                    it.searchQuery,
+                                    it.filterDifficulty,
+                                    it.filterMinLength,
+                                    it.filterMaxLength,
+                                    it.filterHasParking,
+                                    it.filterLocation,
+                                    it.filterStartDate,
+                                    it.filterEndDate
+                                )
                             )
                         }
                     }
@@ -671,7 +689,17 @@ class HikeViewModel @Inject constructor(
                             it.copy(
                                 isLoading = false,
                                 allHikes = result.data,
-                                hikes = applyFilters(result.data, it.searchQuery, it.filterDifficulty, it.filterMinLength, it.filterMaxLength, it.filterHasParking)
+                                hikes = applyFilters(
+                                    result.data,
+                                    it.searchQuery,
+                                    it.filterDifficulty,
+                                    it.filterMinLength,
+                                    it.filterMaxLength,
+                                    it.filterHasParking,
+                                    it.filterLocation,
+                                    it.filterStartDate,
+                                    it.filterEndDate
+                                )
                             )
                         }
                     }
@@ -716,7 +744,17 @@ class HikeViewModel @Inject constructor(
                             it.copy(
                                 isLoading = false,
                                 allHikes = result.data,
-                                hikes = applyFilters(result.data, it.searchQuery, it.filterDifficulty, it.filterMinLength, it.filterMaxLength, it.filterHasParking)
+                                hikes = applyFilters(
+                                    result.data,
+                                    it.searchQuery,
+                                    it.filterDifficulty,
+                                    it.filterMinLength,
+                                    it.filterMaxLength,
+                                    it.filterHasParking,
+                                    it.filterLocation,
+                                    it.filterStartDate,
+                                    it.filterEndDate
+                                )
                             )
                         }
                     }
@@ -743,7 +781,49 @@ class HikeViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 searchQuery = query,
-                hikes = applyFilters(currentState.allHikes, query, currentState.filterDifficulty, currentState.filterMinLength, currentState.filterMaxLength, currentState.filterHasParking)
+                hikes = applyFilters(
+                    currentState.allHikes,
+                    query,
+                    currentState.filterDifficulty,
+                    currentState.filterMinLength,
+                    currentState.filterMaxLength,
+                    currentState.filterHasParking,
+                    currentState.filterLocation,
+                    currentState.filterStartDate,
+                    currentState.filterEndDate
+                )
+            )
+        }
+    }
+
+    private fun applyAdvancedSearch(
+        name: String?,
+        location: String?,
+        minLength: Double?,
+        maxLength: Double?,
+        startDate: Long?,
+        endDate: Long?
+    ) {
+        val currentState = _uiState.value
+        _uiState.update {
+            it.copy(
+                searchQuery = name ?: "",
+                filterLocation = location,
+                filterMinLength = minLength,
+                filterMaxLength = maxLength,
+                filterStartDate = startDate,
+                filterEndDate = endDate,
+                hikes = applyFilters(
+                    currentState.allHikes,
+                    name ?: "",
+                    currentState.filterDifficulty,
+                    minLength,
+                    maxLength,
+                    currentState.filterHasParking,
+                    location,
+                    startDate,
+                    endDate
+                )
             )
         }
     }
@@ -753,7 +833,17 @@ class HikeViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 filterDifficulty = difficulty,
-                hikes = applyFilters(currentState.allHikes, currentState.searchQuery, difficulty, currentState.filterMinLength, currentState.filterMaxLength, currentState.filterHasParking)
+                hikes = applyFilters(
+                    currentState.allHikes,
+                    currentState.searchQuery,
+                    difficulty,
+                    currentState.filterMinLength,
+                    currentState.filterMaxLength,
+                    currentState.filterHasParking,
+                    currentState.filterLocation,
+                    currentState.filterStartDate,
+                    currentState.filterEndDate
+                )
             )
         }
     }
@@ -764,7 +854,17 @@ class HikeViewModel @Inject constructor(
             it.copy(
                 filterMinLength = min,
                 filterMaxLength = max,
-                hikes = applyFilters(currentState.allHikes, currentState.searchQuery, currentState.filterDifficulty, min, max, currentState.filterHasParking)
+                hikes = applyFilters(
+                    currentState.allHikes,
+                    currentState.searchQuery,
+                    currentState.filterDifficulty,
+                    min,
+                    max,
+                    currentState.filterHasParking,
+                    currentState.filterLocation,
+                    currentState.filterStartDate,
+                    currentState.filterEndDate
+                )
             )
         }
     }
@@ -774,7 +874,17 @@ class HikeViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 filterHasParking = hasParking,
-                hikes = applyFilters(currentState.allHikes, currentState.searchQuery, currentState.filterDifficulty, currentState.filterMinLength, currentState.filterMaxLength, hasParking)
+                hikes = applyFilters(
+                    currentState.allHikes,
+                    currentState.searchQuery,
+                    currentState.filterDifficulty,
+                    currentState.filterMinLength,
+                    currentState.filterMaxLength,
+                    hasParking,
+                    currentState.filterLocation,
+                    currentState.filterStartDate,
+                    currentState.filterEndDate
+                )
             )
         }
     }
@@ -788,6 +898,9 @@ class HikeViewModel @Inject constructor(
                 filterMinLength = null,
                 filterMaxLength = null,
                 filterHasParking = null,
+                filterLocation = null,
+                filterStartDate = null,
+                filterEndDate = null,
                 hikes = currentState.allHikes
             )
         }
@@ -799,14 +912,20 @@ class HikeViewModel @Inject constructor(
         difficulty: Difficulty?,
         minLength: Double?,
         maxLength: Double?,
-        hasParking: Boolean?
+        hasParking: Boolean?,
+        locationFilter: String?,
+        startDate: Long?,
+        endDate: Long?
     ): List<Hike> {
         return hikes.filter { hike ->
-            // Search filter - match name, location, or description
+            // Search filter - match name or description
             val matchesSearch = searchQuery.isBlank() ||
                     hike.name.contains(searchQuery, ignoreCase = true) ||
-                    hike.location.name.contains(searchQuery, ignoreCase = true) ||
                     hike.description.contains(searchQuery, ignoreCase = true)
+
+            // Location filter - separate from search
+            val matchesLocation = locationFilter.isNullOrBlank() ||
+                    hike.location.name.contains(locationFilter, ignoreCase = true)
 
             // Difficulty filter
             val matchesDifficulty = difficulty == null || hike.difficulty == difficulty
@@ -818,7 +937,14 @@ class HikeViewModel @Inject constructor(
             // Parking filter
             val matchesParking = hasParking == null || hike.hasParking == hasParking
 
-            matchesSearch && matchesDifficulty && matchesMinLength && matchesMaxLength && matchesParking
+            // Date filter
+            val hikeDate = hike.date.toDate().time
+            val matchesStartDate = startDate == null || hikeDate >= startDate
+            val matchesEndDate = endDate == null || hikeDate <= endDate
+
+            matchesSearch && matchesLocation && matchesDifficulty &&
+            matchesMinLength && matchesMaxLength && matchesParking &&
+            matchesStartDate && matchesEndDate
         }
     }
 

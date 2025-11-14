@@ -18,9 +18,11 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.LocalParking
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -225,6 +227,24 @@ fun HikeDetailScreen(
                             label = "Length",
                             value = "${hike.length} km"
                         )
+
+                        // Group Size
+                        if (hike.groupSize > 0) {
+                            InfoSection(
+                                icon = Icons.Filled.Group,
+                                label = "Group Size",
+                                value = "${hike.groupSize} ${if (hike.groupSize == 1) "person" else "people"}"
+                            )
+                        }
+
+                        // Terrain
+                        if (hike.terrain.isNotBlank()) {
+                            InfoSection(
+                                icon = Icons.Filled.Terrain,
+                                label = "Terrain",
+                                value = hike.terrain
+                            )
+                        }
 
                         // Difficulty and parking row
                         Row(
