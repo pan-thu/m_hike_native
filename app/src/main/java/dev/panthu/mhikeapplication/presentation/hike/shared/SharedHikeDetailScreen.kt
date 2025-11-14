@@ -16,8 +16,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.LocalParking
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Terrain
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -136,6 +138,22 @@ fun SharedHikeDetailScreen(
                             label = "Length",
                             value = "${hike.length} km"
                         )
+
+                        if (hike.groupSize > 0) {
+                            InfoSection(
+                                icon = Icons.Filled.Group,
+                                label = "Group Size",
+                                value = "${hike.groupSize} ${if (hike.groupSize == 1) "person" else "people"}"
+                            )
+                        }
+
+                        if (hike.terrain.isNotBlank()) {
+                            InfoSection(
+                                icon = Icons.Filled.Terrain,
+                                label = "Terrain",
+                                value = hike.terrain
+                            )
+                        }
 
                         // Difficulty and parking row
                         Row(
